@@ -230,6 +230,28 @@ const List = ({ token }) => {
           <p className='text-sm text-gray-400 italic'>No products in this collection</p>
         ) : (
           <div className='flex overflow-x-auto gap-4 pb-4 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100'>
+            {/* Hero Image Card */}
+            {collection.heroImage && (
+              <div className='group relative bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl p-3 text-white shadow-lg hover:shadow-xl transition-transform transform hover:scale-105 duration-300 flex flex-col min-w-[200px] flex-shrink-0'>
+                <div className='relative overflow-hidden rounded-xl h-[180px]'>
+                  <img 
+                    src={collection.heroImage} 
+                    alt={collection.name}
+                    className='w-full h-full object-cover'
+                    onError={(e) => e.target.src = 'https://via.placeholder.com/200?text=Collection'}
+                  />
+                  <div className='absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-2'>
+                    <p className='text-white text-xs font-bold'>Collection Hero</p>
+                  </div>
+                </div>
+                <div className='mt-2'>
+                  <h2 className='text-sm font-semibold leading-tight'>
+                    {collection.name}
+                  </h2>
+                </div>
+              </div>
+            )}
+            
             {collection.products.map((product, idx) => (
               <div key={idx} className='group relative bg-[#1a1816] rounded-2xl p-3 text-white shadow-lg hover:shadow-xl transition-transform transform hover:scale-105 duration-300 flex flex-col min-w-[200px] flex-shrink-0'>
                 <div className='relative overflow-hidden rounded-xl h-[180px]'>

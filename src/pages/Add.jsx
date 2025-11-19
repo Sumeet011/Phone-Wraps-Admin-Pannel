@@ -198,6 +198,7 @@ const Add = ({token}) => {
         isOpen={isAddCollectionModalOpen}
         onClose={() => setIsAddCollectionModalOpen(false)}
         onCollectionAdded={fetchCollections}
+        groupId={selectedGroup}
       />
       
       <form onSubmit={onSubmitHandler} className='flex flex-col w-full items-start gap-4 p-6 bg-gray-50 rounded-lg max-w-6xl'>

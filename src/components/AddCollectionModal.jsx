@@ -4,7 +4,7 @@ import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
 import { assets } from '../assets/assets';
 
-const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded }) => {
+const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId }) => {
   const [collectionName, setCollectionName] = useState('');
   const [description, setDescription] = useState('');
   const [heroImage, setHeroImage] = useState(null);
@@ -30,6 +30,11 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded }) => {
       formData.append('name', collectionName.trim());
       formData.append('description', description.trim());
       
+      // If groupId is provided, include it to associate collection with the group
+      if (groupId) {
+        formData.append('groupId', groupId);
+      }
+      
       if (heroImage) {
         formData.append('heroImage', heroImage);
       }
@@ -41,7 +46,23 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded }) => {
       });
 
       if (response.data.success) {
-        toast.success('Collection created successfully!');
+        const newCollectionId = response.data.data?._id || response.data.data?.id;
+        
+        // If groupId is provided and we have the new collection ID, add it to the group
+        if (groupId && newCollectionId) {
+          try {
+            await axios.post(backendUrl + `/api/groups/${groupId}/collections`, {
+              collectionId: newCollectionId
+            });
+            toast.success('Collection created and added to group successfully!');
+          } catch (groupError) {
+            console.error('Error adding collection to group:', groupError);
+            toast.warning('Collection created but failed to add to group. Please manually assign it.');
+          }
+        } else {
+          toast.success('Collection created successfully!');
+        }
+        
         setCollectionName('');
         setDescription('');
         setHeroImage(null);

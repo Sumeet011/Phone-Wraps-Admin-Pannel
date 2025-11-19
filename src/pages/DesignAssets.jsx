@@ -13,16 +13,13 @@ const DesignAssets = ({ token }) => {
 
   // Form state
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    category: 'other',
-    tags: '',
+    category: 'HERO',
     isActive: true
   })
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
 
-  const categories = ['hero', 'banner', 'card', 'background', 'icon', 'other']
+  const categories = ['HERO','CIRCULAR']
 
   useEffect(() => {
     fetchDesignAssets()
@@ -72,15 +69,8 @@ const DesignAssets = ({ token }) => {
 
     try {
       const data = new FormData()
-      data.append('name', formData.name)
-      data.append('description', formData.description)
       data.append('category', formData.category)
       data.append('isActive', formData.isActive)
-      
-      if (formData.tags) {
-        const tagsArray = formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
-        tagsArray.forEach(tag => data.append('tags[]', tag))
-      }
 
       if (imageFile) {
         data.append('image', imageFile)
@@ -117,10 +107,7 @@ const DesignAssets = ({ token }) => {
   const handleEdit = (asset) => {
     setEditingAsset(asset)
     setFormData({
-      name: asset.name,
-      description: asset.description || '',
       category: asset.category,
-      tags: asset.tags?.join(', ') || '',
       isActive: asset.isActive
     })
     setImagePreview(asset.imageUrl)
@@ -157,10 +144,7 @@ const DesignAssets = ({ token }) => {
     setShowModal(false)
     setEditingAsset(null)
     setFormData({
-      name: '',
-      description: '',
-      category: 'other',
-      tags: '',
+      category: 'HERO',
       isActive: true
     })
     setImageFile(null)
@@ -239,24 +223,11 @@ const DesignAssets = ({ token }) => {
                 </div>
               </div>
               <div className='p-4'>
-                <div className='flex justify-between items-start mb-2'>
-                  <h3 className='font-semibold text-gray-800 line-clamp-1'>{asset.name}</h3>
+                <div className='flex justify-between items-start mb-3'>
                   <span className='text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded capitalize'>
                     {asset.category}
                   </span>
                 </div>
-                {asset.description && (
-                  <p className='text-sm text-gray-600 mb-3 line-clamp-2'>{asset.description}</p>
-                )}
-                {asset.tags && asset.tags.length > 0 && (
-                  <div className='flex flex-wrap gap-1 mb-3'>
-                    {asset.tags.map((tag, idx) => (
-                      <span key={idx} className='text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded'>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
                 <div className='flex gap-2'>
                   <button
                     onClick={() => copyImageUrl(asset.imageUrl)}
@@ -326,31 +297,6 @@ const DesignAssets = ({ token }) => {
                 </div>
               </div>
 
-              {/* Name */}
-              <div>
-                <label className='block text-sm font-semibold text-gray-700 mb-2'>Name *</label>
-                <input
-                  type='text'
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
-                  placeholder='e.g., Hero Background 1'
-                  required
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className='block text-sm font-semibold text-gray-700 mb-2'>Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
-                  placeholder='Brief description of the asset...'
-                  rows='3'
-                />
-              </div>
-
               {/* Category */}
               <div>
                 <label className='block text-sm font-semibold text-gray-700 mb-2'>Category *</label>
@@ -366,19 +312,6 @@ const DesignAssets = ({ token }) => {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* Tags */}
-              <div>
-                <label className='block text-sm font-semibold text-gray-700 mb-2'>Tags</label>
-                <input
-                  type='text'
-                  value={formData.tags}
-                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
-                  placeholder='e.g., gaming, hero, dark (comma-separated)'
-                />
-                <p className='text-xs text-gray-500 mt-1'>Separate multiple tags with commas</p>
               </div>
 
               {/* Is Active */}

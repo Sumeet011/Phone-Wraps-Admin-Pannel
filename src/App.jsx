@@ -7,6 +7,7 @@ import List from './pages/List'
 import Orders from './pages/Orders'
 import Coupons from './pages/Coupons'
 import BlogsRich from './pages/BlogsRich'
+import DesignAssets from './pages/DesignAssets'
 import Login from './components/Login'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -40,6 +41,7 @@ const App = () => {
                 <Route path='/orders' element={<Orders token={token} />} />
                 <Route path='/coupons' element={<Coupons token={token} />} />
                 <Route path='/blogs' element={<BlogsRich token={token} />} />
+                <Route path='/design-assets' element={<DesignAssets token={token} />} />
               </Routes>
             </div>
           </div>

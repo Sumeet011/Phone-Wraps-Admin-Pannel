@@ -4,6 +4,7 @@ import axios from 'axios'
 import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
 import AddGroupModal from '../components/AddGroupModal'
+import AddCollectionModal from '../components/AddCollectionModal'
 
 const Add = ({token}) => {
 
@@ -21,6 +22,7 @@ const Add = ({token}) => {
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [filteredCollections, setFilteredCollections] = useState([]);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
+  const [isAddCollectionModalOpen, setIsAddCollectionModalOpen] = useState(false);
   
   // Basic Product Info
   const [name, setName] = useState("");
@@ -192,6 +194,12 @@ const Add = ({token}) => {
         onGroupAdded={fetchGroups}
       />
       
+      <AddCollectionModal
+        isOpen={isAddCollectionModalOpen}
+        onClose={() => setIsAddCollectionModalOpen(false)}
+        onCollectionAdded={fetchCollections}
+      />
+      
       <form onSubmit={onSubmitHandler} className='flex flex-col w-full items-start gap-4 p-6 bg-gray-50 rounded-lg max-w-6xl'>
       
       {/* Header */}
@@ -316,14 +324,23 @@ const Add = ({token}) => {
           
           {/* Collection Selection */}
           <div className='mb-4'>
-            <p className='mb-2 font-medium text-gray-700'>
-              Select Collection * 
-              {selectedGroup && filteredCollections.length > 0 && (
-                <span className='text-sm text-gray-500 ml-2'>
-                  (Showing {filteredCollections.length} collection(s) from selected group)
-                </span>
-              )}
-            </p>
+            <div className='flex justify-between items-center mb-2'>
+              <p className='font-medium text-gray-700'>
+                Select Collection * 
+                {selectedGroup && filteredCollections.length > 0 && (
+                  <span className='text-sm text-gray-500 ml-2'>
+                    (Showing {filteredCollections.length} collection(s) from selected group)
+                  </span>
+                )}
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsAddCollectionModalOpen(true)}
+                className='px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition flex items-center gap-1'
+              >
+                <span>+</span> New Collection
+              </button>
+            </div>
             <div className='overflow-x-auto pb-2'>
               <div className='flex gap-3'>
                 {loadingCollections ? (

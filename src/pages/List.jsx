@@ -390,7 +390,7 @@ const List = ({ token }) => {
       {/* Collection Edit Modal */}
       {showCollectionModal && editingCollection && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50' onClick={() => setShowCollectionModal(false)}>
-          <div className='bg-white rounded-lg p-6 max-w-md w-full m-4' onClick={(e) => e.stopPropagation()}>
+          <div className='bg-white rounded-lg p-6 max-w-md w-full m-4 max-h-[90vh] overflow-y-auto' onClick={(e) => e.stopPropagation()}>
             <h3 className='text-xl font-bold mb-4'>Edit Collection</h3>
             <div className='space-y-4'>
               <div>
@@ -410,6 +410,45 @@ const List = ({ token }) => {
                   className='w-full border rounded px-3 py-2 h-24'
                 />
               </div>
+              <div>
+                <label className='block text-sm font-semibold mb-1'>Hero/Cover Image</label>
+                <div className='space-y-2'>
+                  {editingCollection.heroImage && (
+                    <div className='relative w-full h-32 rounded overflow-hidden'>
+                      <img 
+                        src={editingCollection.heroImage} 
+                        alt="Current hero" 
+                        className='w-full h-full object-cover'
+                      />
+                    </div>
+                  )}
+                  <label htmlFor='heroImageUpload' className='cursor-pointer'>
+                    <div className='w-full h-32 border-2 border-dashed border-gray-300 rounded hover:border-blue-400 flex items-center justify-center'>
+                      {editingCollection.newHeroImage ? (
+                        <img 
+                          src={URL.createObjectURL(editingCollection.newHeroImage)} 
+                          alt="New hero" 
+                          className='w-full h-full object-cover'
+                        />
+                      ) : (
+                        <div className='text-center'>
+                          <svg className='mx-auto h-8 w-8 text-gray-400' stroke='currentColor' fill='none' viewBox='0 0 48 48'>
+                            <path d='M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' />
+                          </svg>
+                          <p className='text-xs text-gray-500 mt-1'>Upload new hero image</p>
+                        </div>
+                      )}
+                    </div>
+                    <input 
+                      id='heroImageUpload'
+                      type='file' 
+                      accept='image/*'
+                      hidden
+                      onChange={(e) => setEditingCollection({...editingCollection, newHeroImage: e.target.files[0]})}
+                    />
+                  </label>
+                </div>
+              </div>
               <div className='flex gap-2 justify-end'>
                 <button
                   onClick={() => {
@@ -421,10 +460,38 @@ const List = ({ token }) => {
                   Cancel
                 </button>
                 <button
-                  onClick={() => updateCollection(editingCollection._id || editingCollection.id, {
-                    name: editingCollection.name,
-                    description: editingCollection.description
-                  })}
+                  onClick={async () => {
+                    const formData = new FormData();
+                    formData.append('name', editingCollection.name);
+                    formData.append('description', editingCollection.description);
+                    if (editingCollection.newHeroImage) {
+                      formData.append('heroImage', editingCollection.newHeroImage);
+                    }
+                    
+                    try {
+                      const response = await axios.patch(
+                        backendUrl + `/api/collections/${editingCollection._id || editingCollection.id}`, 
+                        formData,
+                        {
+                          headers: {
+                            'Content-Type': 'multipart/form-data'
+                          }
+                        }
+                      );
+
+                      if (response.data.success) {
+                        toast.success('Collection updated successfully');
+                        setShowCollectionModal(false);
+                        setEditingCollection(null);
+                        await fetchAllData();
+                      } else {
+                        toast.error(response.data.message || 'Failed to update collection');
+                      }
+                    } catch (error) {
+                      console.error('Update collection error:', error);
+                      toast.error(error.response?.data?.message || error.message || 'Failed to update collection');
+                    }
+                  }}
                   className='px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600'
                 >
                   Save Changes

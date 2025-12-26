@@ -66,15 +66,28 @@ const List = ({ token }) => {
         fetchProducts()
       ])
 
-      // Organize collections (all collections contain gaming products)
-      const collectionsWithProducts = collectionsData.map(collection => ({
+      // Separate gaming and standard collections
+      console.log('All collections:', collectionsData.map(c => ({ name: c.name, type: c.type })));
+      const gamingCols = collectionsData.filter(col => col.type === 'gaming');
+      const standardCols = collectionsData.filter(col => col.type === 'normal');
+      console.log('Gaming collections filtered:', gamingCols.map(c => c.name));
+      console.log('Standard collections filtered:', standardCols.map(c => c.name));
+
+      // Map collections with their products
+      const gamingCollectionsWithProducts = gamingCols.map(collection => ({
         ...collection,
         products: collection.Products || []
       }));
 
-      setGamingCollections(collectionsWithProducts);
+      const standardCollectionsWithProducts = standardCols.map(collection => ({
+        ...collection,
+        products: collection.Products || []
+      }));
 
-      // Find Standard products that are NOT in any collection
+      setGamingCollections(gamingCollectionsWithProducts);
+      setNonGamingCollections(standardCollectionsWithProducts);
+
+      // Find products that are NOT in any collection (orphaned products)
       const productIdsInCollections = new Set();
       collectionsData.forEach(collection => {
         (collection.Products || []).forEach(product => {
@@ -82,16 +95,15 @@ const List = ({ token }) => {
         });
       });
 
-      // Standard products are those NOT in collections
-      const standardProducts = productsData.filter(product => 
+      const orphanedProducts = productsData.filter(product => 
         !productIdsInCollections.has(product._id || product.id)
       );
 
-      console.log('Collections (gaming):', collectionsWithProducts.length);
-      console.log('Standard products (not in collections):', standardProducts.length);
+      console.log('Gaming collections:', gamingCollectionsWithProducts.length);
+      console.log('Standard collections:', standardCollectionsWithProducts.length);
+      console.log('Orphaned products (not in any collection):', orphanedProducts.length);
       
-      setProducts(standardProducts);
-      setNonGamingCollections([]); // We don't have non-gaming collections
+      setProducts(orphanedProducts);
 
     } catch (error) {
       console.log(error)
@@ -316,81 +328,9 @@ const List = ({ token }) => {
 
   return (
     <div className='max-w-7xl'>
-      {/* Standard Products Section (Not in Collections) */}
-      <div className='mb-8'>
-        <div className='mb-4 pb-2 border-b-2 border-blue-500'>
-          <h2 className='text-2xl font-bold text-gray-800'>Standard Products</h2>
-          <p className='text-sm text-gray-600 mt-1'>
-            {products.length} product(s) not assigned to collections
-          </p>
-        </div>
-        
-        {products.length === 0 ? (
-          <div className='text-center py-8 bg-gray-50 rounded-lg'>
-            <p className='text-gray-500'>No standard products found</p>
-          </div>
-        ) : (
-          <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4'>
-            {products.map((product, idx) => (
-              <div key={product._id || product.id || idx} className='group relative bg-[#1a1816] rounded-2xl p-3 text-white shadow-lg hover:shadow-xl transition-transform transform hover:scale-105 duration-300 flex flex-col'>
-                <div className='relative overflow-hidden rounded-xl h-[180px]'>
-                  <img 
-                    src={product.image} 
-                    alt={product.name}
-                    className='w-full h-full object-cover'
-                    onError={(e) => e.target.src = 'https://via.placeholder.com/200?text=No+Image'}
-                  />
-                  <p className='absolute bottom-2 left-2 text-white text-xs font-semibold bg-black/60 px-2 py-1 rounded'>
-                    ₹{product.price}
-                  </p>
-                  <div className='absolute top-2 right-2 flex gap-1'>
-                    <button 
-                      onClick={() => {
-                        setEditingProduct(product)
-                        setShowProductModal(true)
-                      }}
-                      className='bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded'
-                    >
-                      Edit
-                    </button>
-                    <button 
-                      onClick={() => removeProduct(product._id || product.id)}
-                      className='bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-2 py-1 rounded'
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-
-                <div className='mt-2'>
-                  <h2 className='text-sm font-semibold leading-tight line-clamp-2' title={product.name}>
-                    {product.name}
-                  </h2>
-                  </div>
-
-                <div className='absolute bottom-2 right-2 w-6 h-6 rounded-full bg-white group-hover:bg-lime-400 flex items-center justify-center'>
-                  <svg
-                    className='w-4 h-4 text-black'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                  >
-                    <path
-                      strokeWidth='2'
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      d='M7 17l10-10M7 7h10v10'
-                    />
-                  </svg>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Gaming Collections Section */}
-      <div>
+      <div className='mb-8'>
         <div className='mb-4 pb-2 border-b-2 border-purple-500'>
           <h2 className='text-2xl font-bold text-gray-800'>Gaming Collections</h2>
           <p className='text-sm text-gray-600 mt-1'>
@@ -405,6 +345,26 @@ const List = ({ token }) => {
         ) : (
           gamingCollections.map((collection, index) => (
             <CollectionRow key={collection._id || collection.id || index} collection={collection} isGaming={true} />
+          ))
+        )}
+      </div>
+
+      {/* Standard Collections Section */}
+      <div className='mb-8'>
+        <div className='mb-4 pb-2 border-b-2 border-green-500'>
+          <h2 className='text-2xl font-bold text-gray-800'>Standard Collections</h2>
+          <p className='text-sm text-gray-600 mt-1'>
+            {nonGamingCollections.length} collection(s) with {nonGamingCollections.reduce((acc, col) => acc + col.products.length, 0)} product(s)
+          </p>
+        </div>
+        
+        {nonGamingCollections.length === 0 ? (
+          <div className='text-center py-8 bg-gray-50 rounded-lg'>
+            <p className='text-gray-500'>No standard collections found</p>
+          </div>
+        ) : (
+          nonGamingCollections.map((collection, index) => (
+            <CollectionRow key={collection._id || collection.id || index} collection={collection} isGaming={false} />
           ))
         )}
       </div>
@@ -431,6 +391,17 @@ const List = ({ token }) => {
                   onChange={(e) => setEditingCollection({...editingCollection, description: e.target.value})}
                   className='w-full border rounded px-3 py-2 h-24'
                 />
+              </div>
+              <div>
+                <label className='block text-sm font-semibold mb-1'>Collection Type</label>
+                <select
+                  value={editingCollection.type || 'gaming'}
+                  onChange={(e) => setEditingCollection({...editingCollection, type: e.target.value})}
+                  className='w-full border rounded px-3 py-2'
+                >
+                  <option value='gaming'>Gaming Collection</option>
+                  <option value='normal'>Normal Collection</option>
+                </select>
               </div>
               <div>
                 <label className='block text-sm font-semibold mb-1'>Hero/Cover Image</label>

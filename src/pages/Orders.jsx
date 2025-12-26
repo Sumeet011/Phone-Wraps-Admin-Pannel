@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
@@ -6,9 +7,9 @@ import { assets } from '../assets/assets'
 import PropTypes from 'prop-types'
 
 const Orders = ({ token }) => {
+  const navigate = useNavigate()
 
   const [orders, setOrders] = useState([])
-  const [expandedOrderId, setExpandedOrderId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editingTracking, setEditingTracking] = useState(null)
   const [trackingLink, setTrackingLink] = useState('')
@@ -94,13 +95,80 @@ const Orders = ({ token }) => {
     setCourierPartner(order.courierPartner || '');
   };
 
+  const createShipment = async (orderId) => {
+    if (!confirm('Create shipment in iThink Logistics for this order?')) {
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `${backendUrl}/api/orders/${orderId}/create-shipment`,
+        {},
+        { headers: { token } }
+      );
+
+      if (response.data.success) {
+        toast.success(`Shipment created! AWB: ${response.data.data.awbCode}`);
+        await fetchAllOrders();
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.error('Error creating shipment:', error);
+      toast.error(error.response?.data?.message || 'Failed to create shipment');
+    }
+  };
+
+  const cancelShipment = async (orderId) => {
+    if (!confirm('Cancel shipment in iThink Logistics? Order will remain confirmed.')) {
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `${backendUrl}/api/orders/${orderId}/cancel-shipment`,
+        {},
+        { headers: { token } }
+      );
+
+      if (response.data.success) {
+        toast.success('Shipment cancelled successfully');
+        await fetchAllOrders();
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.error('Error cancelling shipment:', error);
+      toast.error(error.response?.data?.message || 'Failed to cancel shipment');
+    }
+  };
+
+  const cancelOrder = async (orderId) => {
+    const reason = prompt('Enter cancellation reason:');
+    if (!reason) return;
+
+    try {
+      const response = await axios.post(
+        `${backendUrl}/api/orders/${orderId}/cancel`,
+        { reason },
+        { headers: { token } }
+      );
+
+      if (response.data.success) {
+        toast.success('Order cancelled successfully');
+        await fetchAllOrders();
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error(error.response?.data?.message || 'Failed to cancel order');
+    }
+  };
+
   useEffect(() => {
     fetchAllOrders();
   }, [token])
-
-  const toggleExpand = (orderId) => {
-    setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
-  };
 
   const deleteOrder = async (orderId, e) => {
     e.stopPropagation();
@@ -193,7 +261,7 @@ const Orders = ({ token }) => {
             <div
               className="border-2 border-gray-200 rounded-lg p-5 hover:shadow-lg transition cursor-pointer bg-white"
               key={order._id}
-              onClick={() => toggleExpand(order._id)}
+              onClick={() => navigate(`/orders/${order._id}`)}
             >
               {/* Order Header */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
@@ -294,6 +362,48 @@ const Orders = ({ token }) => {
                     📦 Add Tracking
                   </button>
 
+                  {/* Shipment Management Buttons */}
+                  {order.status !== 'Cancelled' && order.status !== 'Delivered' && (
+                    <>
+                      {!order.awbCode ? (
+                        <button
+                          className="bg-blue-500 text-white text-sm px-3 py-2 rounded hover:bg-blue-600 transition font-semibold"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            createShipment(order._id);
+                          }}
+                        >
+                          🚀 Create Shipment
+                        </button>
+                      ) : (
+                        <>
+                          <div className="bg-green-50 border border-green-300 rounded p-2 text-xs">
+                            <p className="font-semibold text-green-700">✅ Shipment Created</p>
+                            <p className="text-gray-600">AWB: {order.awbCode}</p>
+                          </div>
+                          <button
+                            className="bg-orange-500 text-white text-sm px-3 py-2 rounded hover:bg-orange-600 transition"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cancelShipment(order._id);
+                            }}
+                          >
+                            🚫 Cancel Shipment
+                          </button>
+                        </>
+                      )}
+                      <button
+                        className="bg-red-500 text-white text-sm px-3 py-2 rounded hover:bg-red-600 transition"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          cancelOrder(order._id);
+                        }}
+                      >
+                        ❌ Cancel Order
+                      </button>
+                    </>
+                  )}
+
                   {(order.status === 'Delivered' || order.status === 'Cancelled') && (
                     <button
                       className="bg-red-500 text-white text-sm px-3 py-2 rounded hover:bg-red-600 transition"
@@ -305,8 +415,8 @@ const Orders = ({ token }) => {
                 </div>
               </div>
 
-              {/* Expanded Details */}
-              {expandedOrderId === order._id && (
+              {/* Expanded Details - Now moved to separate page */}
+              {false && (
                 <div className="mt-6 pt-6 border-t border-gray-200">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Order Items - Grouped View */}

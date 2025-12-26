@@ -19,7 +19,7 @@ const DesignAssets = ({ token }) => {
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
 
-  const categories = ['HERO','CIRCULAR']
+  const categories = ['HERO','CIRCULAR','CARD']
 
   useEffect(() => {
     fetchDesignAssets()

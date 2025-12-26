@@ -24,6 +24,11 @@ const Add = ({token}) => {
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [isAddCollectionModalOpen, setIsAddCollectionModalOpen] = useState(false);
   
+  // Standard collection specific
+  const [standardCollections, setStandardCollections] = useState([]);
+  const [selectedStandardCollection, setSelectedStandardCollection] = useState("");
+  const [loadingStandardCollections, setLoadingStandardCollections] = useState(false);
+  
   // Basic Product Info
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -47,6 +52,8 @@ const Add = ({token}) => {
     if (productType === "gaming") {
       fetchCollections();
       fetchGroups();
+    } else if (productType === "Standard") {
+      fetchStandardCollections();
     }
   }, [productType]);
 
@@ -75,12 +82,14 @@ const Add = ({token}) => {
   const fetchCollections = async () => {
     try {
       setLoadingCollections(true);
-      const response = await axios.get(backendUrl + '/api/collections');
-      console.log('Collections response:', response.data);
+      const response = await axios.get(backendUrl + '/api/collections?type=gaming');
+      console.log('Gaming Collections response:', response.data);
       if (response.data.success) {
         const cols = response.data.items || response.data.collections || response.data.data || [];
-        console.log('Setting collections:', cols);
-        setCollections(cols);
+        // Filter to only show gaming type collections
+        const gamingCols = cols.filter(col => col.type === 'gaming');
+        console.log('Setting gaming collections:', gamingCols);
+        setCollections(gamingCols);
       } else {
         console.log('Collections fetch failed:', response.data);
         toast.error('Failed to fetch collections');
@@ -111,6 +120,31 @@ const Add = ({token}) => {
       toast.error('Failed to fetch groups: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoadingGroups(false);
+    }
+  };
+  
+  const fetchStandardCollections = async () => {
+    try {
+      setLoadingStandardCollections(true);
+      const response = await axios.get(backendUrl + '/api/collections?type=normal');
+      console.log('Standard Collections response:', response.data);
+      if (response.data.success) {
+        const cols = response.data.items || response.data.collections || response.data.data || [];
+        console.log('All collections received:', cols);
+        // Filter to only show Standard type collections
+        const standardCols = cols.filter(col => col.type === 'normal');
+        console.log('Filtered standard collections:', standardCols);
+        console.log('Number of standard collections:', standardCols.length);
+        setStandardCollections(standardCols);
+      } else {
+        console.log('Standard collections fetch failed:', response.data);
+        toast.error('Failed to fetch standard collections');
+      }
+    } catch (error) {
+      console.error('Error fetching standard collections:', error);
+      toast.error('Failed to fetch standard collections: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoadingStandardCollections(false);
     }
   };
 
@@ -152,6 +186,16 @@ const Add = ({token}) => {
         formData.append("collectionId", selectedCollection);
         formData.append("groupId", selectedGroup);
       }
+      
+      // Standard collection specific
+      if (productType === "Standard") {
+        if (!selectedStandardCollection) {
+          toast.error("Please select a collection for standard products");
+          return;
+        }
+        console.log("Selected Standard Collection ID:", selectedStandardCollection);
+        formData.append("collectionId", selectedStandardCollection);
+      }
 
       // Image
       if (image1) {
@@ -175,6 +219,7 @@ const Add = ({token}) => {
         setFeatures('');
         setSelectedCollection('');
         setSelectedGroup('');
+        setSelectedStandardCollection('');
         setCustomizable(false);
       } else {
         toast.error(response.data.message);
@@ -197,8 +242,9 @@ const Add = ({token}) => {
       <AddCollectionModal
         isOpen={isAddCollectionModalOpen}
         onClose={() => setIsAddCollectionModalOpen(false)}
-        onCollectionAdded={fetchCollections}
-        groupId={selectedGroup}
+        onCollectionAdded={productType === "gaming" ? fetchCollections : fetchStandardCollections}
+        groupId={productType === "gaming" ? selectedGroup : null}
+        collectionType={productType === "gaming" ? "gaming" : "normal"}
       />
       
       <form onSubmit={onSubmitHandler} className='flex flex-col w-full items-start gap-4 p-6 bg-gray-50 rounded-lg max-w-6xl'>
@@ -377,6 +423,77 @@ const Add = ({token}) => {
         </div>
       )}
 
+      {/* Standard Collection Selection */}
+      {productType === "Standard" && (
+        <div className='w-full bg-green-50 p-4 rounded-lg border border-green-200'>
+          <div className='flex justify-between items-center mb-4'>
+            <h3 className='font-semibold text-gray-800'>📱 Standard Collection Settings</h3>
+            <button
+              type="button"
+              onClick={() => {
+                fetchStandardCollections();
+              }}
+              className='px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition'
+            >
+              🔄 Refresh
+            </button>
+          </div>
+
+          {/* Collection Selection */}
+          <div>
+            <div className='flex justify-between items-center mb-2'>
+              <p className='font-medium text-gray-700'>Select Collection *</p>
+              <button
+                type="button"
+                onClick={() => setIsAddCollectionModalOpen(true)}
+                className='px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition flex items-center gap-1'
+              >
+                <span>+</span> New Collection
+              </button>
+            </div>
+            <div className='overflow-x-auto pb-2'>
+              <div className='flex gap-3'>
+                {loadingStandardCollections ? (
+                  <p className='text-sm text-gray-500'>Loading collections...</p>
+                ) : standardCollections.length === 0 ? (
+                  <div className='text-sm text-gray-500 flex flex-col gap-2'>
+                    <p>No standard collections available. Create a collection first.</p>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddCollectionModalOpen(true)}
+                      className='px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition'
+                    >
+                      + Create Your First Collection
+                    </button>
+                  </div>
+                ) : (
+                  standardCollections.map((collection) => (
+                    <div
+                      key={collection._id || collection.id}
+                      onClick={() => {
+                        console.log('Selecting standard collection:', collection._id || collection.id);
+                        setSelectedStandardCollection(collection._id || collection.id);
+                      }}
+                      className={`min-w-[180px] p-3 border-2 rounded-lg cursor-pointer transition shrink-0 ${
+                        selectedStandardCollection === (collection._id || collection.id)
+                          ? 'border-green-500 bg-green-100 shadow-md'
+                          : 'border-gray-300 bg-white hover:border-green-300 hover:shadow'
+                      }`}
+                    >
+                      <p className='font-semibold text-sm text-gray-800 truncate'>{collection.name}</p>
+                      <p className='text-xs text-gray-500 mt-1'>
+                        {collection.Products?.length || 0} products
+                      </p>
+                      <p className='text-xs text-gray-400 mt-1'>Type: Standard</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Upload Image */}
       <div className='w-full'>
         <p className='mb-2 font-semibold text-gray-700'>Product Image *</p>
@@ -406,16 +523,18 @@ const Add = ({token}) => {
           />
         </div>
 
-        <div className='md:col-span-2'>
-          <p className='mb-2 font-semibold text-gray-700'>Product Description *</p>
-          <textarea 
-            onChange={(e)=>setDescription(e.target.value)} 
-            value={description} 
-            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none min-h-[100px]' 
-            placeholder='Detailed product description...' 
-            required
-          />
-        </div>
+        {productType === "gaming" && (
+          <div className='md:col-span-2'>
+            <p className='mb-2 font-semibold text-gray-700'>Product Description *</p>
+            <textarea 
+              onChange={(e)=>setDescription(e.target.value)} 
+              value={description} 
+              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none min-h-[100px]' 
+              placeholder='Detailed product description...' 
+              required
+            />
+          </div>
+        )}
 
         <div>
           <p className='mb-2 font-semibold text-gray-700'>Price (₹) *</p>
@@ -429,20 +548,22 @@ const Add = ({token}) => {
           />
         </div>
 
-        <div>
-          <p className='mb-2 font-semibold text-gray-700'>Level *</p>
-          <select 
-            onChange={(e) => setLevel(e.target.value)} 
-            value={level}
-            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
-          >
-            <option value="1">Level 1</option>
-            <option value="2">Level 2</option>
-            <option value="3">Level 3</option>
-            <option value="4">Level 4</option>
-            <option value="5">Level 5</option>
-          </select>
-        </div>
+        {productType === "gaming" && (
+          <div>
+            <p className='mb-2 font-semibold text-gray-700'>Level *</p>
+            <select 
+              onChange={(e) => setLevel(e.target.value)} 
+              value={level}
+              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
+            >
+              <option value="1">Level 1</option>
+              <option value="2">Level 2</option>
+              <option value="3">Level 3</option>
+              <option value="4">Level 4</option>
+              <option value="5">Level 5</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Product Specifications */}
@@ -548,17 +669,6 @@ const Add = ({token}) => {
               className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
               type="text" 
               placeholder='e.g., Gold' 
-            />
-          </div>
-
-          <div>
-            <p className='mb-2 font-medium text-gray-700'>Hex Code</p>
-            <input 
-              onChange={(e) => setHexCode(e.target.value)} 
-              value={hexCode} 
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
-              type="text" 
-              placeholder='#FF0000' 
             />
           </div>
 

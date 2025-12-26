@@ -4,9 +4,10 @@ import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
 import { assets } from '../assets/assets';
 
-const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId }) => {
+const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, collectionType: initialCollectionType = 'gaming' }) => {
   const [collectionName, setCollectionName] = useState('');
   const [description, setDescription] = useState('');
+  const [collectionType, setCollectionType] = useState(initialCollectionType);
   const [heroImage, setHeroImage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -18,17 +19,15 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId }) => 
       return;
     }
 
-    if (!description.trim()) {
-      toast.error('Please enter a description');
-      return;
-    }
-
     try {
       setIsSubmitting(true);
       
       const formData = new FormData();
       formData.append('name', collectionName.trim());
-      formData.append('description', description.trim());
+      if (description.trim()) {
+        formData.append('description', description.trim());
+      }
+      formData.append('type', collectionType);
       
       // If groupId is provided, include it to associate collection with the group
       if (groupId) {
@@ -82,6 +81,7 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId }) => 
   const handleClose = () => {
     setCollectionName('');
     setDescription('');
+    setCollectionType(initialCollectionType);
     setHeroImage(null);
     onClose();
   };
@@ -122,16 +122,35 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId }) => 
           {/* Description */}
           <div className="mb-4">
             <label className="block text-gray-700 font-medium mb-2">
-              Description *
+              Description (Optional)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Enter a description for this collection..."
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none min-h-[100px]"
-              required
               disabled={isSubmitting}
             />
+          </div>
+
+          {/* Collection Type */}
+          <div className="mb-4">
+            <label className="block text-gray-700 font-medium mb-2">
+              Collection Type *
+            </label>
+            <select
+              value={collectionType}
+              onChange={(e) => setCollectionType(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+              required
+              disabled={isSubmitting || groupId}
+            >
+              <option value="gaming">Gaming Collection</option>
+              <option value="normal">Standard Collection</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              {groupId ? 'Collection type is set based on the selected product type' : 'Gaming collections require groups, Standard collections do not'}
+            </p>
           </div>
 
           {/* Hero Image Upload */}

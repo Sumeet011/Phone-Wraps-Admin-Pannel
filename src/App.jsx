@@ -11,14 +11,14 @@ import BlogsRich from './pages/BlogsRich'
 import DesignAssets from './pages/DesignAssets'
 import SiteSettings from './pages/SiteSettings'
 import CollectionTooltips from './pages/CollectionTooltips'
+import PhoneBrands from './pages/PhoneBrands'
 import Login from './components/Login'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-//export const backendUrl = "https://phone-wraps-backend.onrender.com"
+
 export const backendUrl = import.meta.env.VITE_BACKEND_URL
-console.log("Backend URL:", backendUrl);
-export const currency = '$'
+export const currency = '₹'
 
 
 const App = () => {
@@ -50,6 +50,7 @@ const App = () => {
                 <Route path='/design-assets' element={<DesignAssets token={token} />} />
                 <Route path='/site-settings' element={<SiteSettings token={token} />} />
                 <Route path='/collection-tooltips' element={<CollectionTooltips token={token} />} />
+                <Route path='/phone-brands' element={<PhoneBrands token={token} />} />
               </Routes>
             </div>
           </div>

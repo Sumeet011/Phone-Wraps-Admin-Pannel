@@ -52,6 +52,13 @@ const Sidebar = () => {
                 <p className='hidden md:block'>Collection Tooltips</p>
             </NavLink>
 
+            <NavLink className='flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-l' to="/phone-brands">
+                <svg className='w-5 h-5' fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <p className='hidden md:block'>Phone Brands</p>
+            </NavLink>
+
         </div>
 
     </div>

@@ -26,6 +26,10 @@ const OrderDetails = ({ token }) => {
 
       if (response.data.success) {
         setOrder(response.data.order)
+        console.log('📦 Order data:', response.data.order);
+        console.log('🎨 Order items:', response.data.order.items);
+        console.log('🖼️ Items with customDesign:', response.data.order.items?.filter(i => i.customDesign));
+        console.log('🎟️ Applied coupons:', response.data.order.appliedCoupons);
         setTrackingLink(response.data.order.trackingLink || '')
         setTrackingNumber(response.data.order.trackingNumber || '')
         setCourierPartner(response.data.order.courierPartner || '')
@@ -175,31 +179,49 @@ const OrderDetails = ({ token }) => {
               {order.items?.map((item, index) => (
                 <div key={index} className="flex gap-4 p-4 border rounded-lg hover:bg-gray-50">
                   <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
-                    {item.productId?.image || item.image || item.productImage || item.customDesign?.designImageUrl ? (
-                      <img
-                        src={item.productId?.image || item.image || item.productImage || item.customDesign?.designImageUrl}
-                        alt={item.productName || item.name || item.productId?.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.src = 'https://via.placeholder.com/100?text=No+Image'
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        No Image
-                      </div>
-                    )}
+                    {(() => {
+                      const imageUrl = item.customDesign?.designImageUrl || 
+                                      item.customDesign?.originalImageUrl || 
+                                      item.productId?.image || 
+                                      item.image || 
+                                      item.productImage;
+                      
+                      return imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={item.productName || item.name || item.productId?.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = 'https://via.placeholder.com/100?text=No+Image'
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                          No Image
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-800">
-                      {item.productName || item.name || item.productId?.name}
+                      {item.productName || item.name || item.productId?.name || 'Custom Design'}
                     </h3>
-                    {item.phoneModel && (
+                    {item.itemType === 'custom-design' && (
+                      <div className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded mt-1">
+                        Custom Design
+                      </div>
+                    )}
+                    {(item.selectedBrand || item.selectedModel) && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        <span className="font-medium">Phone:</span> {item.selectedBrand} {item.selectedModel}
+                      </p>
+                    )}
+                    {item.phoneModel && !item.selectedBrand && !item.selectedModel && (
                       <p className="text-sm text-gray-600">
                         <span className="font-medium">Phone Model:</span> {item.phoneModel}
                       </p>
                     )}
-                    {item.itemType && (
+                    {item.itemType && item.itemType !== 'custom-design' && (
                       <p className="text-sm text-gray-600">
                         <span className="font-medium">Type:</span> {item.itemType}
                       </p>
@@ -208,6 +230,16 @@ const OrderDetails = ({ token }) => {
                       <p className="text-sm text-gray-600">
                         <span className="font-medium">Collection:</span> {item.collectionId?.name || item.collectionName}
                       </p>
+                    )}
+                    {item.customDesign?.designImageUrl && (
+                      <a
+                        href={item.customDesign.designImageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline block mt-1"
+                      >
+                        View Full Design →
+                      </a>
                     )}
                     <div className="mt-2 flex justify-between items-center">
                       <span className="text-sm text-gray-600">
@@ -229,13 +261,29 @@ const OrderDetails = ({ token }) => {
                   <span>Subtotal:</span>
                   <span>₹{order.subtotal || 0}</span>
                 </div>
-                {order.couponCode && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Coupon Applied ({order.couponCode}):</span>
-                    <span>- ₹{order.couponDiscount || 0}</span>
+                
+                {/* Display applied coupons array */}
+                {order.appliedCoupons && order.appliedCoupons.length > 0 && (
+                  <div className="space-y-1">
+                    {order.appliedCoupons.map((coupon, index) => (
+                      <div key={index} className="flex justify-between text-green-600">
+                        <span>Coupon ({coupon.code}) - {coupon.discountPercentage}% off:</span>
+                        <span>- ₹{coupon.discountAmount || 0}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
-                {order.discount > 0 && !order.couponCode && (
+                
+                {/* Legacy coupon support */}
+                {order.couponCode && (!order.appliedCoupons || order.appliedCoupons.length === 0) && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Coupon Applied ({order.couponCode}):</span>
+                    <span>- ₹{order.couponDiscount || order.discount || 0}</span>
+                  </div>
+                )}
+                
+                {/* Generic discount without coupon */}
+                {order.discount > 0 && !order.couponCode && (!order.appliedCoupons || order.appliedCoupons.length === 0) && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount:</span>
                     <span>- ₹{order.discount}</span>

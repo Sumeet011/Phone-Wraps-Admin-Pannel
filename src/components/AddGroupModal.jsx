@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
+import logger from '../utils/logger';
 
 const AddGroupModal = ({ isOpen, onClose, onGroupAdded }) => {
   const [groupName, setGroupName] = useState('');
@@ -30,7 +31,7 @@ const AddGroupModal = ({ isOpen, onClose, onGroupAdded }) => {
         toast.error(response.data.message || 'Failed to create group');
       }
     } catch (error) {
-      console.error('Error creating group:', error);
+      logger.error('Error creating group:', error);
       toast.error(error.response?.data?.message || 'Failed to create group');
     } finally {
       setIsSubmitting(false);

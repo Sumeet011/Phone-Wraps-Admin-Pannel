@@ -2,6 +2,7 @@ import axios from 'axios'
 import React, { useEffect, useState } from 'react'
 import { backendUrl, currency } from '../App'
 import { toast } from 'react-toastify'
+import logger from '../utils/logger'
 
 const List = ({ token }) => {
 
@@ -20,10 +21,10 @@ const List = ({ token }) => {
   const fetchCollections = async () => {
     try {
       const response = await axios.get(backendUrl + '/api/collections/')
-      console.log('Collections response:', response.data);
+      logger.log('Collections response:', response.data);
       if (response.data.success) {
         const collectionsList = response.data.items || response.data.data || response.data.collections || [];
-        console.log('Collections list:', collectionsList);
+        logger.log('Collections list:', collectionsList);
         setCollections(collectionsList);
         return collectionsList;
       }
@@ -32,7 +33,7 @@ const List = ({ token }) => {
         return [];
       }
     } catch (error) {
-      console.log(error)
+      logger.error('Error fetching collections:', error)
       toast.error(error.message || 'Failed to fetch collections')
       return [];
     }
@@ -41,7 +42,7 @@ const List = ({ token }) => {
   const fetchProducts = async () => {
     try {
       const response = await axios.get(backendUrl + '/api/products')
-      console.log('Products fetched:', response.data);
+      logger.log('Products fetched:', response.data);
       if (response.data.success) {
         const productsList = response.data.items || response.data.data || response.data.products || [];
         setProducts(productsList);
@@ -52,7 +53,7 @@ const List = ({ token }) => {
         return [];
       }
     } catch (error) {
-      console.log(error)
+      logger.error('Error fetching products:', error)
       toast.error(error.message || 'Failed to fetch products')
       return [];
     }
@@ -67,11 +68,11 @@ const List = ({ token }) => {
       ])
 
       // Separate gaming and standard collections
-      console.log('All collections:', collectionsData.map(c => ({ name: c.name, type: c.type })));
+      logger.log('All collections:', collectionsData.map(c => ({ name: c.name, type: c.type })));
       const gamingCols = collectionsData.filter(col => col.type === 'gaming');
       const standardCols = collectionsData.filter(col => col.type === 'normal');
-      console.log('Gaming collections filtered:', gamingCols.map(c => c.name));
-      console.log('Standard collections filtered:', standardCols.map(c => c.name));
+      logger.log('Gaming collections filtered:', gamingCols.map(c => c.name));
+      logger.log('Standard collections filtered:', standardCols.map(c => c.name));
 
       // Map collections with their products
       const gamingCollectionsWithProducts = gamingCols.map(collection => ({

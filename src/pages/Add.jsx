@@ -5,6 +5,9 @@ import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
 import AddGroupModal from '../components/AddGroupModal'
 import AddCollectionModal from '../components/AddCollectionModal'
+import { validateRequired, validatePositiveNumber, validateImageFile } from '../utils/validation'
+import logger from '../utils/logger'
+import LoadingSpinner from '../components/LoadingSpinner'
 
 const Add = ({token}) => {
 
@@ -23,6 +26,7 @@ const Add = ({token}) => {
   const [filteredCollections, setFilteredCollections] = useState([]);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [isAddCollectionModalOpen, setIsAddCollectionModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Standard collection specific
   const [standardCollections, setStandardCollections] = useState([]);
@@ -67,8 +71,8 @@ const Add = ({token}) => {
         const filtered = collections.filter(col => 
           groupCollectionIds.includes(col._id || col.id)
         );
-        console.log('Selected group:', group);
-        console.log('Filtered collections:', filtered);
+        logger.log('Selected group:', group);
+        logger.log('Filtered collections:', filtered);
         setFilteredCollections(filtered);
         setSelectedCollection(""); // Reset collection selection when group changes
       } else {
@@ -83,19 +87,19 @@ const Add = ({token}) => {
     try {
       setLoadingCollections(true);
       const response = await axios.get(backendUrl + '/api/collections?type=gaming');
-      console.log('Gaming Collections response:', response.data);
+      logger.log('Gaming Collections response:', response.data);
       if (response.data.success) {
         const cols = response.data.items || response.data.collections || response.data.data || [];
         // Filter to only show gaming type collections
         const gamingCols = cols.filter(col => col.type === 'gaming');
-        console.log('Setting gaming collections:', gamingCols);
+        logger.log('Setting gaming collections:', gamingCols);
         setCollections(gamingCols);
       } else {
-        console.log('Collections fetch failed:', response.data);
+        logger.log('Collections fetch failed:', response.data);
         toast.error('Failed to fetch collections');
       }
     } catch (error) {
-      console.error('Error fetching collections:', error);
+      logger.error('Error fetching collections:', error);
       toast.error('Failed to fetch collections: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoadingCollections(false);
@@ -106,17 +110,17 @@ const Add = ({token}) => {
     try {
       setLoadingGroups(true);
       const response = await axios.get(backendUrl + '/api/groups');
-      console.log('Groups response:', response.data);
+      logger.log('Groups response:', response.data);
       if (response.data.success) {
         const grps = response.data.items || response.data.data || [];
-        console.log('Setting groups:', grps);
+        logger.log('Setting groups:', grps);
         setGroups(grps);
       } else {
-        console.log('Groups fetch failed:', response.data);
+        logger.log('Groups fetch failed:', response.data);
         toast.error('Failed to fetch groups');
       }
     } catch (error) {
-      console.error('Error fetching groups:', error);
+      logger.error('Error fetching groups:', error);
       toast.error('Failed to fetch groups: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoadingGroups(false);
@@ -127,21 +131,21 @@ const Add = ({token}) => {
     try {
       setLoadingStandardCollections(true);
       const response = await axios.get(backendUrl + '/api/collections?type=normal');
-      console.log('Standard Collections response:', response.data);
+      logger.log('Standard Collections response:', response.data);
       if (response.data.success) {
         const cols = response.data.items || response.data.collections || response.data.data || [];
-        console.log('All collections received:', cols);
+        logger.log('All collections received:', cols);
         // Filter to only show Standard type collections
         const standardCols = cols.filter(col => col.type === 'normal');
-        console.log('Filtered standard collections:', standardCols);
-        console.log('Number of standard collections:', standardCols.length);
+        logger.log('Filtered standard collections:', standardCols);
+        logger.log('Number of standard collections:', standardCols.length);
         setStandardCollections(standardCols);
       } else {
-        console.log('Standard collections fetch failed:', response.data);
+        logger.log('Standard collections fetch failed:', response.data);
         toast.error('Failed to fetch standard collections');
       }
     } catch (error) {
-      console.error('Error fetching standard collections:', error);
+      logger.error('Error fetching standard collections:', error);
       toast.error('Failed to fetch standard collections: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoadingStandardCollections(false);
@@ -151,12 +155,34 @@ const Add = ({token}) => {
    const onSubmitHandler = async (e) => {
     e.preventDefault();
 
+    // Validate form
+    if (!validateRequired(name)) {
+      toast.error('Product name is required');
+      return;
+    }
+    if (!validateRequired(description)) {
+      toast.error('Product description is required');
+      return;
+    }
+    if (!validatePositiveNumber(price)) {
+      toast.error('Please enter a valid price');
+      return;
+    }
+    if (image1) {
+      const imageValidation = validateImageFile(image1);
+      if (!imageValidation.valid) {
+        toast.error(imageValidation.error);
+        return;
+      }
+    }
+
     try {
+      setIsSubmitting(true);
       const formData = new FormData();
 
       // Basic Info
-      formData.append("name", name);
-      formData.append("description", description);
+      formData.append("name", name.trim());
+      formData.append("description", description.trim());
       formData.append("price", Number(price));
       formData.append("type", productType);
       formData.append("level", level);
@@ -166,12 +192,12 @@ const Add = ({token}) => {
       formData.append("material", material);
       formData.append("finish", finish);
       formData.append("designType", designType);
-      formData.append("primaryColor", primaryColor);
-      formData.append("secondaryColor", secondaryColor);
-      formData.append("hexCode", hexCode);
-      formData.append("pattern", pattern);
+      formData.append("primaryColor", primaryColor.trim());
+      formData.append("secondaryColor", secondaryColor.trim());
+      formData.append("hexCode", hexCode.trim());
+      formData.append("pattern", pattern.trim());
       formData.append("customizable", customizable);
-      formData.append("features", features);
+      formData.append("features", features.trim());
       
       // Gaming specific
       if (productType === "gaming") {
@@ -193,7 +219,7 @@ const Add = ({token}) => {
           toast.error("Please select a collection for standard products");
           return;
         }
-        console.log("Selected Standard Collection ID:", selectedStandardCollection);
+        logger.log("Selected Standard Collection ID:", selectedStandardCollection);
         formData.append("collectionId", selectedStandardCollection);
       }
 
@@ -206,7 +232,7 @@ const Add = ({token}) => {
   const response = await axios.post(backendUrl + "/api/products", formData, { headers: { token } });
 
       if (response.data.success) {
-        toast.success(response.data.message);
+        toast.success(response.data.message || 'Product added successfully!');
         // Reset form
         setName('');
         setDescription('');
@@ -222,12 +248,14 @@ const Add = ({token}) => {
         setSelectedStandardCollection('');
         setCustomizable(false);
       } else {
-        toast.error(response.data.message);
+        toast.error(response.data.message || 'Failed to add product');
       }
 
     } catch (error) {
-      console.log(error);
-      toast.error(error.message)
+      logger.error('Error adding product:', error);
+      toast.error(error.response?.data?.message || 'Failed to add product');
+    } finally {
+      setIsSubmitting(false);
     }
    }
 
@@ -714,9 +742,17 @@ const Add = ({token}) => {
       {/* Submit Button */}
       <button 
         type="submit" 
-        className='w-full md:w-auto px-8 py-3 mt-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition shadow-md hover:shadow-lg'
+        disabled={isSubmitting}
+        className='w-full md:w-auto px-8 py-3 mt-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
       >
-        Add Product
+        {isSubmitting ? (
+          <>
+            <LoadingSpinner size="sm" />
+            <span>Adding Product...</span>
+          </>
+        ) : (
+          'Add Product'
+        )}
       </button>
 
     </form>

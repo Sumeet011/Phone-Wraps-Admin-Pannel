@@ -5,6 +5,7 @@ import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
 import PropTypes from 'prop-types'
+import logger from '../utils/logger'
 
 const Orders = ({ token }) => {
   const navigate = useNavigate()
@@ -31,8 +32,8 @@ const Orders = ({ token }) => {
         toast.error(response.data.message)
       }
     } catch (error) {
-      console.error('Error fetching orders:', error)
-      toast.error(error.message || 'Failed to fetch orders')
+      logger.error('Error fetching orders:', error)
+      toast.error(error.response?.data?.message || error.message || 'Failed to fetch orders')
     } finally {
       setLoading(false)
     }
@@ -54,7 +55,7 @@ const Orders = ({ token }) => {
         toast.error(response.data.message);
       }
     } catch (error) {
-      console.error('Error updating status:', error);
+      logger.error('Error updating status:', error);
       toast.error(error.response?.data?.message || "Failed to update status");
     }
   };
@@ -83,7 +84,7 @@ const Orders = ({ token }) => {
         toast.error(response.data.message);
       }
     } catch (error) {
-      console.error('Error updating tracking:', error);
+      logger.error('Error updating tracking:', error);
       toast.error(error.response?.data?.message || "Failed to update tracking information");
     }
   };

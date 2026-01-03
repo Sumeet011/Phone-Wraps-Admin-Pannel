@@ -5,7 +5,6 @@ import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
 import PropTypes from 'prop-types'
-import logger from '../utils/logger'
 
 const Orders = ({ token }) => {
   const navigate = useNavigate()
@@ -32,8 +31,8 @@ const Orders = ({ token }) => {
         toast.error(response.data.message)
       }
     } catch (error) {
-      logger.error('Error fetching orders:', error)
-      toast.error(error.response?.data?.message || error.message || 'Failed to fetch orders')
+      console.error('Error fetching orders:', error)
+      toast.error(error.message || 'Failed to fetch orders')
     } finally {
       setLoading(false)
     }
@@ -55,7 +54,7 @@ const Orders = ({ token }) => {
         toast.error(response.data.message);
       }
     } catch (error) {
-      logger.error('Error updating status:', error);
+      console.error('Error updating status:', error);
       toast.error(error.response?.data?.message || "Failed to update status");
     }
   };
@@ -84,7 +83,7 @@ const Orders = ({ token }) => {
         toast.error(response.data.message);
       }
     } catch (error) {
-      logger.error('Error updating tracking:', error);
+      console.error('Error updating tracking:', error);
       toast.error(error.response?.data?.message || "Failed to update tracking information");
     }
   };
@@ -292,15 +291,50 @@ const Orders = ({ token }) => {
                       {order.shippingAddress?.zipCode || order.address?.zipcode}
                     </p>
                   </div>
-                  <p className="text-xs mt-2">
-                    <span className="font-semibold">Items:</span>{' '}
-                    {order.items?.map((item, index) => (
-                      <span key={index}>
-                        {item.productName || item.name} x {item.quantity}
-                        {index < order.items.length - 1 ? ', ' : ''}
-                      </span>
-                    ))}
-                  </p>
+                  {/* Order Items with Images */}
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-semibold text-gray-700">Order Items:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {order.items?.slice(0, 3).map((item, index) => {
+                        // Priority 1: Individual product image (for gaming collection cards)
+                        let imageUrl = item.image || item.customDesign?.designImageUrl || item.collectionImage;
+                        
+                        // Priority 2: Fallback to populated references (for old orders or edge cases)
+                        if (!imageUrl) {
+                          if (item.productId?.images?.[0]) {
+                            imageUrl = item.productId.images[0];
+                          } else if (item.productId?.image) {
+                            imageUrl = item.productId.image;
+                          } else if (item.collectionId?.heroImage) {
+                            imageUrl = item.collectionId.heroImage;
+                          }
+                        }
+
+                        return (
+                          <div key={index} className="flex items-center gap-2 bg-gray-100 rounded px-2 py-1">
+                            {imageUrl && (
+                              <img 
+                                src={imageUrl} 
+                                alt={item.productName || item.name} 
+                                className="w-8 h-8 object-cover rounded border border-gray-300"
+                              />
+                            )}
+                            <div className="text-xs">
+                              <p className="font-medium text-gray-800">
+                                {item.productName || item.name}
+                              </p>
+                              <p className="text-gray-600">Qty: {item.quantity}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {order.items?.length > 3 && (
+                        <div className="flex items-center justify-center bg-blue-100 text-blue-700 rounded px-3 py-1 text-xs font-semibold">
+                          +{order.items.length - 3} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Order Details */}

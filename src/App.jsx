@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import Add from './pages/Add'
 import List from './pages/List'
 import Orders from './pages/Orders'
@@ -12,6 +12,7 @@ import DesignAssets from './pages/DesignAssets'
 import SiteSettings from './pages/SiteSettings'
 import CollectionTooltips from './pages/CollectionTooltips'
 import PhoneBrands from './pages/PhoneBrands'
+import SuggestedProducts from './pages/SuggestedProducts'
 import Login from './components/Login'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -26,27 +27,12 @@ const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token')?localStorage.getItem('token'):'');
 
   useEffect(()=>{
-    if (token) {
-      localStorage.setItem('token', token)
-    } else {
-      localStorage.removeItem('token')
-    }
+    localStorage.setItem('token',token)
   },[token])
 
   return (
     <div className='bg-gray-50 min-h-screen'>
-      <ToastContainer 
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={true}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+      <ToastContainer />
       {token === ""
         ? <Login setToken={setToken} />
         : <>
@@ -56,7 +42,6 @@ const App = () => {
             <Sidebar />
             <div className='w-[70%] mx-auto ml-[max(5vw,25px)] my-8 text-gray-600 text-base'>
               <Routes>
-                <Route path='/' element={<Navigate to="/orders" replace />} />
                 <Route path='/add' element={<Add token={token} />} />
                 <Route path='/list' element={<List token={token} />} />
                 <Route path='/orders' element={<Orders token={token} />} />
@@ -67,7 +52,7 @@ const App = () => {
                 <Route path='/site-settings' element={<SiteSettings token={token} />} />
                 <Route path='/collection-tooltips' element={<CollectionTooltips token={token} />} />
                 <Route path='/phone-brands' element={<PhoneBrands token={token} />} />
-                <Route path='*' element={<Navigate to="/orders" replace />} />
+                <Route path='/suggested-products' element={<SuggestedProducts token={token} />} />
               </Routes>
             </div>
           </div>

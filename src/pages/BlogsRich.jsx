@@ -208,9 +208,13 @@ const BlogsRich = ({ token }) => {
       }
 
       // Append content images
-      contentImages.forEach(image => {
+      contentImages.forEach((image, idx) => {
+        console.log(`Appending content image ${idx}:`, image.name, image.type, image.size);
         formData.append('contentImages', image);
       });
+
+      console.log('Total content images:', contentImages.length);
+      console.log('Processed blocks:', processedBlocks);
 
       formData.append('contentBlocks', JSON.stringify(processedBlocks));
 

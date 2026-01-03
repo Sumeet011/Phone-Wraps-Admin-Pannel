@@ -59,6 +59,13 @@ const Sidebar = () => {
                 <p className='hidden md:block'>Phone Brands</p>
             </NavLink>
 
+            <NavLink className='flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-l' to="/suggested-products">
+                <svg className='w-5 h-5' fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className='hidden md:block'>Suggested Products</p>
+            </NavLink>
+
         </div>
 
     </div>

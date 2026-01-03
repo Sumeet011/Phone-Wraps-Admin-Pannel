@@ -180,11 +180,16 @@ const OrderDetails = ({ token }) => {
                 <div key={index} className="flex gap-4 p-4 border rounded-lg hover:bg-gray-50">
                   <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                     {(() => {
-                      const imageUrl = item.customDesign?.designImageUrl || 
+                      // Priority 1: Individual product image first (for gaming collection cards)
+                      const imageUrl = item.image || 
+                                      item.customDesign?.designImageUrl || 
                                       item.customDesign?.originalImageUrl || 
-                                      item.productId?.image || 
-                                      item.image || 
-                                      item.productImage;
+                                      item.productImage ||
+                                      item.collectionImage || 
+                                      // Priority 2: Fallback to populated references
+                                      item.productId?.images?.[0] ||
+                                      item.productId?.image ||
+                                      item.collectionId?.heroImage;
                       
                       return imageUrl ? (
                         <img
@@ -240,7 +245,18 @@ const OrderDetails = ({ token }) => {
                       >
                         View Full Design →
                       </a>
+                      
                     )}
+                    {item.customDesign?.originalImageUrl && (
+                    <a
+                        href={item.customDesign.originalImageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline block mt-1"
+                      >
+                        View Only Design →
+                      </a>
+                      )}
                     <div className="mt-2 flex justify-between items-center">
                       <span className="text-sm text-gray-600">
                         Quantity: <span className="font-semibold">{item.quantity}</span>

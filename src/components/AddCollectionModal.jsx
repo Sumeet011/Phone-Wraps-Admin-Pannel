@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
@@ -8,14 +8,27 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
   const [collectionName, setCollectionName] = useState('');
   const [description, setDescription] = useState('');
   const [collectionType, setCollectionType] = useState(initialCollectionType);
+  const [price, setPrice] = useState('');
   const [heroImage, setHeroImage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Update collection type when modal opens or initialCollectionType changes
+  useEffect(() => {
+    if (isOpen) {
+      setCollectionType(initialCollectionType);
+    }
+  }, [isOpen, initialCollectionType]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!collectionName.trim()) {
       toast.error('Please enter a collection name');
+      return;
+    }
+    
+    if (collectionType === 'gaming' && (!price || Number(price) <= 0)) {
+      toast.error('Please enter a valid price for gaming collection');
       return;
     }
 
@@ -28,6 +41,9 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
         formData.append('description', description.trim());
       }
       formData.append('type', collectionType);
+      if (collectionType === 'gaming' && price) {
+        formData.append('price', Number(price));
+      }
       
       // If groupId is provided, include it to associate collection with the group
       if (groupId) {
@@ -64,6 +80,7 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
         
         setCollectionName('');
         setDescription('');
+        setPrice('');
         setHeroImage(null);
         onCollectionAdded(); // Refresh the collections list
         onClose();
@@ -82,6 +99,7 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
     setCollectionName('');
     setDescription('');
     setCollectionType(initialCollectionType);
+    setPrice('');
     setHeroImage(null);
     onClose();
   };
@@ -133,25 +151,50 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
             />
           </div>
 
-          {/* Collection Type */}
-          <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-2">
-              Collection Type *
-            </label>
-            <select
-              value={collectionType}
-              onChange={(e) => setCollectionType(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-              required
-              disabled={isSubmitting || groupId}
-            >
-              <option value="gaming">Gaming Collection</option>
-              <option value="normal">Standard Collection</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              {groupId ? 'Collection type is set based on the selected product type' : 'Gaming collections require groups, Standard collections do not'}
-            </p>
-          </div>
+          {/* Collection Type - Only show if context is not set */}
+          {!groupId && initialCollectionType === 'gaming' && (
+            <div className="mb-4">
+              <label className="block text-gray-700 font-medium mb-2">
+                Collection Type *
+              </label>
+              <select
+                value={collectionType}
+                onChange={(e) => setCollectionType(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                required
+                disabled={isSubmitting}
+              >
+                <option value="gaming">Gaming Collection</option>
+                <option value="normal">Standard Collection</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Gaming collections require groups, Standard collections do not
+              </p>
+            </div>
+          )}
+
+          {/* Price for Gaming Collections */}
+          {collectionType === 'gaming' && (
+            <div className="mb-4">
+              <label className="block text-gray-700 font-medium mb-2">
+                Collection Price (₹) *
+              </label>
+              <input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="e.g., 499"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                required
+                min="0"
+                step="1"
+                disabled={isSubmitting}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This price applies to the entire collection (all 5 cards)
+              </p>
+            </div>
+          )}
 
           {/* Hero Image Upload */}
           <div className="mb-4">

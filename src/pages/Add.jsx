@@ -495,13 +495,15 @@ const Add = ({token}) => {
                   </span>
                 )}
               </p>
-              <button
-                type="button"
-                onClick={() => setIsAddCollectionModalOpen(true)}
-                className='px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition flex items-center gap-1'
-              >
-                <span>+</span> New Collection
-              </button>
+              {selectedGroup && (
+      <button
+        type="button"
+        onClick={() => setIsAddCollectionModalOpen(true)}
+        className='px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition flex items-center gap-1'
+      >
+        <span>+</span> New Collection
+      </button>
+    )}
             </div>
             <div className='overflow-x-auto pb-2'>
               <div className='flex gap-3'>
@@ -609,268 +611,295 @@ const Add = ({token}) => {
         </div>
       )}
 
-      {/* Upload Image */}
-      <div className='w-full'>
-        <p className='mb-2 font-semibold text-gray-700'>Product Image *</p>
-        <label htmlFor="image1" className='cursor-pointer'>
-          <div className='w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden hover:border-blue-400 transition'>
-            <img 
-              className='w-full h-full object-cover' 
-              src={!image1 ? assets.upload_area : URL.createObjectURL(image1)} 
-              alt="Upload" 
-            />
-          </div>
-          <input onChange={(e)=>setImage1(e.target.files[0])} type="file" id="image1" hidden accept='image/*'/>
-        </label>
+      {/* Product Details Form - Only show when selections are made */}
+      {((productType === "gaming" && selectedGroup && selectedCollection) || 
+  (productType === "Standard" && selectedStandardCollection)) && (
+  <>
+    {/* Upload Image */}
+    <div className='w-full'>
+      <p className='mb-2 font-semibold text-gray-700'>Product Image *</p>
+      <label htmlFor="image1" className='cursor-pointer'>
+        <div className='w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden hover:border-blue-400 transition'>
+          <img 
+            className='w-full h-full object-cover' 
+            src={!image1 ? assets.upload_area : URL.createObjectURL(image1)} 
+            alt="Upload" 
+          />
+        </div>
+        <input onChange={(e)=>setImage1(e.target.files[0])} type="file" id="image1" hidden accept='image/*'/>
+      </label>
+    </div>
+
+    {/* Basic Information */}
+    <div className='w-full grid grid-cols-1 md:grid-cols-2 gap-4'>
+      <div className='md:col-span-2'>
+        <p className='mb-2 font-semibold text-gray-700'>Product Name *</p>
+        <input 
+          onChange={(e)=>setName(e.target.value)} 
+          value={name} 
+          className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
+          type="text" 
+          placeholder='e.g., Iron Man Phone Case' 
+          required
+        />
       </div>
 
-      {/* Basic Information */}
-      <div className='w-full grid grid-cols-1 md:grid-cols-2 gap-4'>
-        <div className='md:col-span-2'>
-          <p className='mb-2 font-semibold text-gray-700'>Product Name *</p>
-          <input 
-            onChange={(e)=>setName(e.target.value)} 
-            value={name} 
-            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
-            type="text" 
-            placeholder='e.g., Iron Man Phone Case' 
+      {productType === "gaming" && (
+        <div key="gaming-description" className='md:col-span-2'>
+          <p className='mb-2 font-semibold text-gray-700'>Product Description *</p>
+          <textarea 
+            onChange={(e)=>setDescription(e.target.value)} 
+            value={description} 
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none min-h-[100px]' 
+            placeholder='Detailed product description...' 
             required
           />
         </div>
+      )}
 
-        {productType === "gaming" && (
-          <div key="gaming-description" className='md:col-span-2'>
-            <p className='mb-2 font-semibold text-gray-700'>Product Description *</p>
-            <textarea 
-              onChange={(e)=>setDescription(e.target.value)} 
-              value={description} 
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none min-h-[100px]' 
-              placeholder='Detailed product description...' 
-              required
-            />
-          </div>
-        )}
-
-        {productType === "Standard" && (
-          <div key="standard-price">
-            <p className='mb-2 font-semibold text-gray-700'>Price (₹) *</p>
-            <input 
-              onChange={(e) => setPrice(e.target.value)} 
-              value={price} 
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
-              type="number" 
-              placeholder='499' 
-              required 
-            />
-          </div>
-        )}
-
-        {productType === "gaming" && (
-          <div key="gaming-level">
-            <div className='flex items-center justify-between mb-2'>
-              <p className='font-semibold text-gray-700'>Level *</p>
-              {selectedCollection && !loadingProducts && (
-                <span className='text-xs text-gray-500'>
-                  Available: {5 - usedLevels.length}/5 levels
-                  {usedLevels.length > 0 && ` (Used: ${usedLevels.join(', ')})`}
-                </span>
-              )}
-            </div>
-            <select 
-              onChange={(e) => setLevel(e.target.value)} 
-              value={level}
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
-              disabled={!selectedCollection || loadingProducts}
-            >
-              {!selectedCollection ? (
-                <option value="">Select collection first</option>
-              ) : loadingProducts ? (
-                <option value="">Loading available levels...</option>
-              ) : (
-                ['1', '2', '3', '4', '5']
-                  .filter(lvl => !usedLevels.includes(lvl))
-                  .map(lvl => (
-                    <option key={lvl} value={lvl}>
-                      Level {lvl}
-                    </option>
-                  ))
-              )}
-              {!loadingProducts && selectedCollection && usedLevels.length > 0 && (
-                <optgroup label="Already Used (Not Available)">
-                  {usedLevels.map(lvl => (
-                    <option key={`used-${lvl}`} value={lvl} disabled>
-                      Level {lvl} (Already Used)
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-            {loadingProducts && <p className='text-sm text-blue-500 mt-1'>🔄 Loading available levels...</p>}
-            {!loadingProducts && selectedCollection && usedLevels.length === 5 && (
-              <p className='text-sm text-red-500 mt-1'>⚠️ All levels (1-5) are already used in this collection!</p>
-            )}
-            {!loadingProducts && selectedCollection && usedLevels.length === 0 && (
-              <p className='text-sm text-green-600 mt-1'>✅ All levels available for this collection</p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Product Specifications */}
-      <div className='w-full'>
-        <h3 className='font-semibold text-gray-800 mb-3 text-lg border-b pb-2'>Product Specifications</h3>
-        
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-          <div>
-            <p className='mb-2 font-medium text-gray-700'>Category *</p>
-            <select 
-              onChange={(e) => setCategory(e.target.value)} 
-              value={category}
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
-            >
-              <option value="Phone Case">Phone Case</option>
-              <option value="Phone Skin">Phone Skin</option>
-              <option value="Screen Protector">Screen Protector</option>
-              <option value="Full Body Wrap">Full Body Wrap</option>
-              <option value="Camera Protector">Camera Protector</option>
-              <option value="Combo Pack">Combo Pack</option>
-            </select>
-          </div>
-
-          <div>
-            <p className='mb-2 font-medium text-gray-700'>Material *</p>
-            <select 
-              onChange={(e) => setMaterial(e.target.value)} 
-              value={material}
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
-            >
-              <option value="TPU">TPU</option>
-              <option value="Silicone">Silicone</option>
-              <option value="Polycarbonate">Polycarbonate</option>
-              <option value="Leather">Leather</option>
-              <option value="PU Leather">PU Leather</option>
-              <option value="Metal">Metal</option>
-              <option value="Vinyl">Vinyl</option>
-              <option value="Tempered Glass">Tempered Glass</option>
-              <option value="Hybrid">Hybrid</option>
-              <option value="Aramid Fiber">Aramid Fiber</option>
-            </select>
-          </div>
-
-          <div>
-            <p className='mb-2 font-medium text-gray-700'>Finish</p>
-            <select 
-              onChange={(e) => setFinish(e.target.value)} 
-              value={finish}
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
-            >
-              <option value="Matte">Matte</option>
-              <option value="Glossy">Glossy</option>
-              <option value="Textured">Textured</option>
-              <option value="Transparent">Transparent</option>
-              <option value="Metallic">Metallic</option>
-              <option value="Carbon Fiber">Carbon Fiber</option>
-              <option value="Wood Grain">Wood Grain</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Design Details */}
-      <div className='w-full'>
-        <h3 className='font-semibold text-gray-800 mb-3 text-lg border-b pb-2'>Design Details</h3>
-        
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          <div>
-            <p className='mb-2 font-medium text-gray-700'>Design Type *</p>
-            <select 
-              onChange={(e) => setDesignType(e.target.value)} 
-              value={designType}
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
-            >
-              <option value="Solid Color">Solid Color</option>
-              <option value="Pattern">Pattern</option>
-              <option value="Custom Print">Custom Print</option>
-              <option value="Transparent">Transparent</option>
-              <option value="Gradient">Gradient</option>
-              <option value="Marble">Marble</option>
-              <option value="Artistic">Artistic</option>
-              <option value="Brand Logo">Brand Logo</option>
-            </select>
-          </div>
-
-          <div>
-            <p className='mb-2 font-medium text-gray-700'>Primary Color *</p>
-            <input 
-              onChange={(e) => setPrimaryColor(e.target.value)} 
-              value={primaryColor} 
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
-              type="text" 
-              placeholder='e.g., Red' 
-              required 
-            />
-          </div>
-
-          <div>
-            <p className='mb-2 font-medium text-gray-700'>Secondary Color</p>
-            <input 
-              onChange={(e) => setSecondaryColor(e.target.value)} 
-              value={secondaryColor} 
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
-              type="text" 
-              placeholder='e.g., Gold' 
-            />
-          </div>
-
-          <div className='md:col-span-2'>
-            <p className='mb-2 font-medium text-gray-700'>Pattern Name</p>
-            <input 
-              onChange={(e) => setPattern(e.target.value)} 
-              value={pattern} 
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
-              type="text" 
-              placeholder='e.g., Geometric, Floral' 
-            />
-          </div>
-        </div>
-
-        <div className='flex gap-2 mt-4'>
+      {productType === "Standard" && (
+        <div key="standard-price">
+          <p className='mb-2 font-semibold text-gray-700'>Price (₹) *</p>
           <input 
-            onChange={() => setCustomizable(prev => !prev)} 
-            checked={customizable} 
-            type="checkbox" 
-            id='customizable' 
-            className='w-4 h-4 text-blue-500'
+            onChange={(e) => setPrice(e.target.value)} 
+            value={price} 
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
+            type="number" 
+            placeholder='499' 
+            required 
           />
-          <label className='cursor-pointer text-gray-700' htmlFor="customizable">
-            This product is customizable
-          </label>
+        </div>
+      )}
+
+      {productType === "gaming" && (
+        <div key="gaming-level">
+          <div className='flex items-center justify-between mb-2'>
+            <p className='font-semibold text-gray-700'>Level *</p>
+            {selectedCollection && !loadingProducts && (
+              <span className='text-xs text-gray-500'>
+                Available: {5 - usedLevels.length}/5 levels
+                {usedLevels.length > 0 && ` (Used: ${usedLevels.join(', ')})`}
+              </span>
+            )}
+          </div>
+          <select 
+            onChange={(e) => setLevel(e.target.value)} 
+            value={level}
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
+            disabled={!selectedCollection || loadingProducts}
+          >
+            {!selectedCollection ? (
+              <option value="">Select collection first</option>
+            ) : loadingProducts ? (
+              <option value="">Loading available levels...</option>
+            ) : (
+              ['1', '2', '3', '4', '5']
+                .filter(lvl => !usedLevels.includes(lvl))
+                .map(lvl => (
+                  <option key={lvl} value={lvl}>
+                    Level {lvl}
+                  </option>
+                ))
+            )}
+            {!loadingProducts && selectedCollection && usedLevels.length > 0 && (
+              <optgroup label="Already Used (Not Available)">
+                {usedLevels.map(lvl => (
+                  <option key={`used-${lvl}`} value={lvl} disabled>
+                    Level {lvl} (Already Used)
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+          {loadingProducts && <p className='text-sm text-blue-500 mt-1'>🔄 Loading available levels...</p>}
+          {!loadingProducts && selectedCollection && usedLevels.length === 5 && (
+            <p className='text-sm text-red-500 mt-1'>⚠️ All levels (1-5) are already used in this collection!</p>
+          )}
+          {!loadingProducts && selectedCollection && usedLevels.length === 0 && (
+            <p className='text-sm text-green-600 mt-1'>✅ All levels available for this collection</p>
+          )}
+        </div>
+      )}
+    </div>
+
+    {/* Product Specifications */}
+    <div className='w-full'>
+      <h3 className='font-semibold text-gray-800 mb-3 text-lg border-b pb-2'>Product Specifications</h3>
+      
+      <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+        <div>
+          <p className='mb-2 font-medium text-gray-700'>Category *</p>
+          <select 
+            onChange={(e) => setCategory(e.target.value)} 
+            value={category}
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
+          >
+            <option value="Phone Case">Phone Case</option>
+            <option value="Phone Skin">Phone Skin</option>
+            <option value="Screen Protector">Screen Protector</option>
+            <option value="Full Body Wrap">Full Body Wrap</option>
+            <option value="Camera Protector">Camera Protector</option>
+            <option value="Combo Pack">Combo Pack</option>
+          </select>
+        </div>
+
+        <div>
+          <p className='mb-2 font-medium text-gray-700'>Material *</p>
+          <select 
+            onChange={(e) => setMaterial(e.target.value)} 
+            value={material}
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
+          >
+            <option value="TPU">TPU</option>
+            <option value="Silicone">Silicone</option>
+            <option value="Polycarbonate">Polycarbonate</option>
+            <option value="Leather">Leather</option>
+            <option value="PU Leather">PU Leather</option>
+            <option value="Metal">Metal</option>
+            <option value="Vinyl">Vinyl</option>
+            <option value="Tempered Glass">Tempered Glass</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="Aramid Fiber">Aramid Fiber</option>
+          </select>
+        </div>
+
+        <div>
+          <p className='mb-2 font-medium text-gray-700'>Finish</p>
+          <select 
+            onChange={(e) => setFinish(e.target.value)} 
+            value={finish}
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
+          >
+            <option value="Matte">Matte</option>
+            <option value="Glossy">Glossy</option>
+            <option value="Textured">Textured</option>
+            <option value="Transparent">Transparent</option>
+            <option value="Metallic">Metallic</option>
+            <option value="Carbon Fiber">Carbon Fiber</option>
+            <option value="Wood Grain">Wood Grain</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    {/* Design Details */}
+    <div className='w-full'>
+      <h3 className='font-semibold text-gray-800 mb-3 text-lg border-b pb-2'>Design Details</h3>
+      
+      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+        <div>
+          <p className='mb-2 font-medium text-gray-700'>Design Type *</p>
+          <select 
+            onChange={(e) => setDesignType(e.target.value)} 
+            value={designType}
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none'
+          >
+            <option value="Solid Color">Solid Color</option>
+            <option value="Pattern">Pattern</option>
+            <option value="Custom Print">Custom Print</option>
+            <option value="Transparent">Transparent</option>
+            <option value="Gradient">Gradient</option>
+            <option value="Marble">Marble</option>
+            <option value="Artistic">Artistic</option>
+            <option value="Brand Logo">Brand Logo</option>
+          </select>
+        </div>
+
+        <div>
+          <p className='mb-2 font-medium text-gray-700'>Primary Color *</p>
+          <input 
+            onChange={(e) => setPrimaryColor(e.target.value)} 
+            value={primaryColor} 
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
+            type="text" 
+            placeholder='e.g., Red' 
+            required 
+          />
+        </div>
+
+        <div>
+          <p className='mb-2 font-medium text-gray-700'>Secondary Color</p>
+          <input 
+            onChange={(e) => setSecondaryColor(e.target.value)} 
+            value={secondaryColor} 
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
+            type="text" 
+            placeholder='e.g., Gold' 
+          />
+        </div>
+
+        <div className='md:col-span-2'>
+          <p className='mb-2 font-medium text-gray-700'>Pattern Name</p>
+          <input 
+            onChange={(e) => setPattern(e.target.value)} 
+            value={pattern} 
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
+            type="text" 
+            placeholder='e.g., Geometric, Floral' 
+          />
         </div>
       </div>
 
-      {/* Features */}
-      <div className='w-full'>
-        <p className='mb-2 font-semibold text-gray-700'>Product Features</p>
-        <textarea 
-          onChange={(e)=>setFeatures(e.target.value)} 
-          value={features} 
-          className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
-          placeholder='Enter features separated by commas (e.g., Shockproof, Wireless charging compatible, Anti-scratch)' 
-          rows="3"
+      <div className='flex gap-2 mt-4'>
+        <input 
+          onChange={() => setCustomizable(prev => !prev)} 
+          checked={customizable} 
+          type="checkbox" 
+          id='customizable' 
+          className='w-4 h-4 text-blue-500'
         />
-        <p className='text-xs text-gray-500 mt-1'>Separate multiple features with commas</p>
+        <label className='cursor-pointer text-gray-700' htmlFor="customizable">
+          This product is customizable
+        </label>
       </div>
+    </div>
 
-      {/* Submit Button */}
-      <button 
-        type="submit" 
-        className='w-full md:w-auto px-8 py-3 mt-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition shadow-md hover:shadow-lg'
-      >
-        Add Product
-      </button>
+    {/* Features */}
+    <div className='w-full'>
+      <p className='mb-2 font-semibold text-gray-700'>Product Features</p>
+      <textarea 
+        onChange={(e)=>setFeatures(e.target.value)} 
+        value={features} 
+        className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
+        placeholder='Enter features separated by commas (e.g., Shockproof, Wireless charging compatible, Anti-scratch)' 
+        rows="3"
+      />
+      <p className='text-xs text-gray-500 mt-1'>Separate multiple features with commas</p>
+    </div>
 
-    </form>
+    {/* Submit Button */}
+    <button 
+      type="submit" 
+      className='w-full md:w-auto px-8 py-3 mt-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition shadow-md hover:shadow-lg'
+    >
+      Add Product
+    </button>
+  </>
+)}
+
+{/* Helper message when selections are not complete */}
+{productType === "gaming" && (!selectedGroup || !selectedCollection) && (
+  <div className='w-full p-6 bg-yellow-50 border border-yellow-200 rounded-lg'>
+    <p className='text-yellow-800 font-medium'>
+      ⚠️ Please select both a Group and Collection to continue adding product details.
+    </p>
+    <ul className='mt-2 text-sm text-yellow-700 list-disc list-inside'>
+      {!selectedGroup && <li>Select a Group first</li>}
+      {!selectedCollection && <li>Select a Collection from the chosen group</li>}
+    </ul>
+  </div>
+)}
+
+{productType === "Standard" && !selectedStandardCollection && (
+  <div className='w-full p-6 bg-yellow-50 border border-yellow-200 rounded-lg'>
+    <p className='text-yellow-800 font-medium'>
+      ⚠️ Please select a Collection to continue adding product details.
+    </p>
+  </div>
+)}
+      </form>
     </>
+    
   )
 }
 

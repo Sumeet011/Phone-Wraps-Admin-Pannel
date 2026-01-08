@@ -120,6 +120,17 @@ const OrderDetails = ({ token }) => {
     fetchOrderDetails()
   }, [orderId, token])
 
+  // Force reload on component mount to ensure fresh data
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchOrderDetails()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [orderId, token])
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -226,11 +237,35 @@ const OrderDetails = ({ token }) => {
                         <span className="font-medium">Phone Model:</span> {item.phoneModel}
                       </p>
                     )}
-                    {item.itemType && item.itemType !== 'custom-design' && (
+                    {/* Display type based on collection or item type */}
+                    {item.collectionId?.type === 'gaming' ? (
+                      <>
+                        <p className="text-sm text-gray-600">
+                          <span className="font-medium">Type:</span> Gaming Collection
+                        </p>
+                        {item.level && (
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Level:</span> {item.level}
+                          </p>
+                        )}
+                      </>
+                    ) : item.itemType === 'suggested' ? (
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Type:</span> Suggested Product
+                      </p>
+                    ) : item.itemType === 'collection' ? (
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Type:</span> Collection Product
+                      </p>
+                    ) : item.itemType === 'product' ? (
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Type:</span> Product
+                      </p>
+                    ) : item.itemType && item.itemType !== 'custom-design' ? (
                       <p className="text-sm text-gray-600">
                         <span className="font-medium">Type:</span> {item.itemType}
                       </p>
-                    )}
+                    ) : null}
                     {(item.collectionId?.name || item.collectionName) && (
                       <p className="text-sm text-gray-600">
                         <span className="font-medium">Collection:</span> {item.collectionId?.name || item.collectionName}
@@ -262,13 +297,47 @@ const OrderDetails = ({ token }) => {
                         Quantity: <span className="font-semibold">{item.quantity}</span>
                       </span>
                       <span className="font-semibold text-gray-800">
-                        ₹{item.price} × {item.quantity} = ₹{item.price * item.quantity}
+                        ₹{item.price} × {item.quantity} = ₹{(item.price * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
+
+            {/* Plates Section - Separate from Items */}
+            {order.plates && order.plates.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-3 text-blue-600">🎴 Gaming Collection Plates</h3>
+                <div className="space-y-4">
+                  {order.plates.map((plate, index) => (
+                    <div key={index} className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                      <div className="flex items-start gap-4">
+                        {plate.collectionImage && (
+                          <img
+                            src={plate.collectionImage}
+                            alt={plate.collectionName}
+                            className="w-20 h-20 object-cover rounded-md border border-blue-300"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-800 text-lg">{plate.collectionName}</h4>
+                          <p className="text-sm text-gray-600 mt-1">Gaming Collection Plates</p>
+                          <div className="mt-2 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">
+                              Quantity: <span className="font-semibold">{plate.quantity}</span>
+                            </span>
+                            <span className="font-semibold text-gray-800">
+                              ₹{plate.pricePerPlate} × {plate.quantity} = ₹{plate.totalPrice.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Order Summary */}
             <div className="mt-6 pt-4 border-t">
@@ -413,16 +482,135 @@ const OrderDetails = ({ token }) => {
                   {order.paymentStatus}
                 </span>
               </div>
-              {order.transactionId && (
-                <div>
-                  <p className="text-sm text-gray-600">Transaction ID</p>
-                  <p className="font-semibold text-gray-800 text-sm break-all">
-                    {order.transactionId}
-                  </p>
-                </div>
-              )}
             </div>
           </div>
+
+          {/* Return Request Section */}
+          {order.returnRequest?.isRequested && (
+            <div className="bg-white rounded-lg shadow-md p-6 border-2 border-orange-500">
+              <h2 className="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                <span>🔄</span> Return Request
+              </h2>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-gray-600">Status</p>
+                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                    order.returnRequest.status === 'Pending' ? 'bg-orange-100 text-orange-800' :
+                    order.returnRequest.status === 'Approved' ? 'bg-blue-100 text-blue-800' :
+                    order.returnRequest.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {order.returnRequest.status}
+                  </span>
+                </div>
+                
+                <div>
+                  <p className="text-sm text-gray-600">Requested On</p>
+                  <p className="font-semibold text-gray-800">
+                    {new Date(order.returnRequest.requestedAt).toLocaleString()}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">Items to Return</p>
+                  <div className="space-y-2">
+                    {/* Returned products */}
+                    {order.returnRequest.items?.map((item, index) => (
+                      <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="font-semibold text-sm text-gray-800">{item.productName}</p>
+                        <p className="text-xs text-gray-600">{item.phoneModel}</p>
+                        <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
+                        <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
+                          <p className="text-xs text-gray-600 font-semibold">Reason:</p>
+                          <p className="text-xs text-gray-800">{item.reason}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Returned plates */}
+                    {order.returnRequest.plates?.map((plate, idx) => (
+                      <div key={`plate-${idx}`} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="font-semibold text-sm text-blue-800">🎴 {plate.collectionName} Plate</p>
+                        <p className="text-xs text-gray-600">Qty: {plate.quantity}</p>
+                        <div className="mt-2 p-2 bg-yellow-100 rounded border border-yellow-300">
+                          <p className="text-xs text-blue-700 font-semibold">Reason:</p>
+                          <p className="text-xs text-gray-800">{plate.reason}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {order.returnRequest.adminNote && (
+                  <div>
+                    <p className="text-sm text-gray-600">Admin Note</p>
+                    <p className="text-sm text-gray-800 bg-blue-50 p-2 rounded">
+                      {order.returnRequest.adminNote}
+                    </p>
+                  </div>
+                )}
+
+                {order.returnRequest.status === 'Pending' && (
+                  <div className="pt-3 border-t space-y-2">
+                    <button
+                      onClick={async () => {
+                        const adminNote = prompt('Enter admin note (optional):');
+                        try {
+                          const response = await axios.post(
+                            `${backendUrl}/api/orders/return-status`,
+                            { 
+                              orderId: order._id, 
+                              status: 'Approved',
+                              adminNote: adminNote || ''
+                            },
+                            { headers: { token } }
+                          );
+                          if (response.data.success) {
+                            toast.success('Return request approved');
+                            await fetchOrderDetails();
+                          } else {
+                            toast.error(response.data.message);
+                          }
+                        } catch (error) {
+                          toast.error('Failed to approve return request');
+                        }
+                      }}
+                      className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg font-semibold transition"
+                    >
+                      ✓ Approve Return
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const adminNote = prompt('Enter reason for rejection:');
+                        if (!adminNote) return;
+                        try {
+                          const response = await axios.post(
+                            `${backendUrl}/api/orders/return-status`,
+                            { 
+                              orderId: order._id, 
+                              status: 'Rejected',
+                              adminNote
+                            },
+                            { headers: { token } }
+                          );
+                          if (response.data.success) {
+                            toast.success('Return request rejected');
+                            await fetchOrderDetails();
+                          } else {
+                            toast.error(response.data.message);
+                          }
+                        } catch (error) {
+                          toast.error('Failed to reject return request');
+                        }
+                      }}
+                      className="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg font-semibold transition"
+                    >
+                      ✗ Reject Return
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Tracking Information */}
           <div className="bg-white rounded-lg shadow-md p-6">

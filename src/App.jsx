@@ -13,6 +13,8 @@ import SiteSettings from './pages/SiteSettings'
 import CollectionTooltips from './pages/CollectionTooltips'
 import PhoneBrands from './pages/PhoneBrands'
 import SuggestedProducts from './pages/SuggestedProducts'
+import FeaturedHomeProducts from './pages/FeaturedHomeProducts'
+import Users from './pages/Users'
 import Login from './components/Login'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -53,6 +55,8 @@ const App = () => {
                 <Route path='/collection-tooltips' element={<CollectionTooltips token={token} />} />
                 <Route path='/phone-brands' element={<PhoneBrands token={token} />} />
                 <Route path='/suggested-products' element={<SuggestedProducts token={token} />} />
+                <Route path='/featured-home-products' element={<FeaturedHomeProducts token={token} />} />
+                <Route path='/users' element={<Users token={token} />} />
               </Routes>
             </div>
           </div>

@@ -9,6 +9,7 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
   const [description, setDescription] = useState('');
   const [collectionType, setCollectionType] = useState(initialCollectionType);
   const [price, setPrice] = useState('');
+  const [platePrice, setPlatePrice] = useState('');
   const [heroImage, setHeroImage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,6 +44,9 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
       formData.append('type', collectionType);
       if (collectionType === 'gaming' && price) {
         formData.append('price', Number(price));
+      }
+      if (collectionType === 'gaming' && platePrice) {
+        formData.append('plateprice', Number(platePrice));
       }
       
       // If groupId is provided, include it to associate collection with the group
@@ -81,6 +85,7 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
         setCollectionName('');
         setDescription('');
         setPrice('');
+        setPlatePrice('');
         setHeroImage(null);
         onCollectionAdded(); // Refresh the collections list
         onClose();
@@ -100,6 +105,7 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
     setDescription('');
     setCollectionType(initialCollectionType);
     setPrice('');
+    setPlatePrice('');
     setHeroImage(null);
     onClose();
   };
@@ -175,25 +181,46 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
 
           {/* Price for Gaming Collections */}
           {collectionType === 'gaming' && (
-            <div className="mb-4">
-              <label className="block text-gray-700 font-medium mb-2">
-                Collection Price (₹) *
-              </label>
-              <input
-                type="number"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="e.g., 499"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                required
-                min="0"
-                step="1"
-                disabled={isSubmitting}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                This price applies to the entire collection (all 5 cards)
-              </p>
-            </div>
+            <>
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-2">
+                  Collection Price (₹) *
+                </label>
+                <input
+                  type="number"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="e.g., 499"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                  required
+                  min="0"
+                  step="1"
+                  disabled={isSubmitting}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This price applies to the entire collection (all 5 cards)
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-2">
+                  Plate Price (₹)
+                </label>
+                <input
+                  type="number"
+                  value={platePrice}
+                  onChange={(e) => setPlatePrice(e.target.value)}
+                  placeholder="e.g., 299"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                  min="0"
+                  step="1"
+                  disabled={isSubmitting}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional: Additional plate/accessory price for gaming collection
+                </p>
+              </div>
+            </>
           )}
 
           {/* Hero Image Upload */}

@@ -349,6 +349,21 @@ const Orders = ({ token }) => {
                       {order.paymentStatus}
                     </span>
                   </div>
+                  
+                  {/* Return Request Indicator */}
+                  {order.returnRequest?.isRequested && (
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        order.returnRequest.status === 'Pending' ? 'bg-orange-100 text-orange-800' :
+                        order.returnRequest.status === 'Approved' ? 'bg-blue-100 text-blue-800' :
+                        order.returnRequest.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        🔄 Return {order.returnRequest.status}
+                      </span>
+                    </div>
+                  )}
+                  
                   <p className="text-xs">
                     <span className="font-semibold">Payment:</span> {order.paymentMethod}
                   </p>

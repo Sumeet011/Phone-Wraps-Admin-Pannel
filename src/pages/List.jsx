@@ -403,6 +403,46 @@ const List = ({ token }) => {
                   <option value='normal'>Normal Collection</option>
                 </select>
               </div>
+              
+              {/* Gaming Collection Specific Fields */}
+              {editingCollection.type === 'gaming' && (
+                <>
+                  <div>
+                    <label className='block text-sm font-semibold mb-1'>Collection Price (₹) *</label>
+                    <input
+                      type='number'
+                      value={editingCollection.price || ''}
+                      onChange={(e) => setEditingCollection({...editingCollection, price: e.target.value})}
+                      className='w-full border rounded px-3 py-2'
+                      placeholder='499'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-semibold mb-1'>Plate Price (₹)</label>
+                    <input
+                      type='number'
+                      value={editingCollection.plateprice || ''}
+                      onChange={(e) => setEditingCollection({...editingCollection, plateprice: e.target.value})}
+                      className='w-full border rounded px-3 py-2'
+                      placeholder='299'
+                    />
+                    <p className='text-xs text-gray-500 mt-1'>Optional: Additional plate/accessory price</p>
+                  </div>
+                  <div>
+                    <label className='block text-sm font-semibold mb-1'>Features (comma-separated)</label>
+                    <textarea
+                      value={(editingCollection.Features || []).join(', ')}
+                      onChange={(e) => setEditingCollection({
+                        ...editingCollection,
+                        Features: e.target.value.split(',').map(f => f.trim()).filter(f => f)
+                      })}
+                      className='w-full border rounded px-3 py-2 h-20'
+                      placeholder='Shockproof, Wireless Charging Compatible, Raised Edges'
+                    />
+                  </div>
+                </>
+              )}
+              
               <div>
                 <label className='block text-sm font-semibold mb-1'>Hero/Cover Image</label>
                 <div className='space-y-2'>
@@ -457,6 +497,21 @@ const List = ({ token }) => {
                     const formData = new FormData();
                     formData.append('name', editingCollection.name);
                     formData.append('description', editingCollection.description);
+                    formData.append('type', editingCollection.type);
+                    
+                    // Gaming collection specific fields
+                    if (editingCollection.type === 'gaming') {
+                      if (editingCollection.price) {
+                        formData.append('price', editingCollection.price);
+                      }
+                      if (editingCollection.plateprice) {
+                        formData.append('plateprice', editingCollection.plateprice);
+                      }
+                      if (editingCollection.Features && editingCollection.Features.length > 0) {
+                        formData.append('Features', JSON.stringify(editingCollection.Features));
+                      }
+                    }
+                    
                     if (editingCollection.newHeroImage) {
                       formData.append('heroImage', editingCollection.newHeroImage);
                     }
@@ -498,43 +553,72 @@ const List = ({ token }) => {
       {/* Product Edit Modal */}
       {showProductModal && editingProduct && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50' onClick={() => setShowProductModal(false)}>
-          <div className='bg-white rounded-lg p-6 max-w-2xl w-full m-4 max-h-[90vh] overflow-y-auto' onClick={(e) => e.stopPropagation()}>
+          <div className='bg-white rounded-lg p-6 max-w-4xl w-full m-4 max-h-[90vh] overflow-y-auto' onClick={(e) => e.stopPropagation()}>
             <h3 className='text-xl font-bold mb-4'>Edit Product</h3>
-            <div className='grid grid-cols-2 gap-4'>
-              <div className='col-span-2'>
-                <label className='block text-sm font-semibold mb-1'>Product Name</label>
-                <input
-                  type='text'
-                  value={editingProduct.name || ''}
-                  onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
-                  className='w-full border rounded px-3 py-2'
-                />
-              </div>
+            <div className='space-y-6'>
+              
+              {/* Product Image */}
               <div>
-                <label className='block text-sm font-semibold mb-1'>Price</label>
-                <input
-                  type='number'
-                  value={editingProduct.price || ''}
-                  onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})}
-                  className='w-full border rounded px-3 py-2'
-                />
+                <label className='block text-sm font-semibold mb-2'>Product Image</label>
+                <div className='flex gap-4 items-start'>
+                  {editingProduct.image && (
+                    <div className='w-32 h-32 border rounded overflow-hidden'>
+                      <img src={editingProduct.image} alt="Current" className='w-full h-full object-cover' />
+                    </div>
+                  )}
+                  <label htmlFor='productImageUpload' className='cursor-pointer'>
+                    <div className='w-32 h-32 border-2 border-dashed border-gray-300 rounded hover:border-blue-400 flex items-center justify-center'>
+                      {editingProduct.newImage ? (
+                        <img src={URL.createObjectURL(editingProduct.newImage)} alt="New" className='w-full h-full object-cover' />
+                      ) : (
+                        <div className='text-center'>
+                          <svg className='mx-auto h-8 w-8 text-gray-400' stroke='currentColor' fill='none' viewBox='0 0 48 48'>
+                            <path d='M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' />
+                          </svg>
+                          <p className='text-xs text-gray-500 mt-1'>Upload new</p>
+                        </div>
+                      )}
+                    </div>
+                    <input 
+                      id='productImageUpload'
+                      type='file' 
+                      accept='image/*'
+                      hidden
+                      onChange={(e) => setEditingProduct({...editingProduct, newImage: e.target.files[0]})}
+                    />
+                  </label>
+                </div>
               </div>
+
+              {/* Basic Information */}
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='col-span-2'>
+                  <label className='block text-sm font-semibold mb-1'>Product Name *</label>
+                  <input
+                    type='text'
+                    value={editingProduct.name || ''}
+                    onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
+                    className='w-full border rounded px-3 py-2'
+                    required
+                  />
+                </div>
+                <div className='col-span-2'>
+                  <label className='block text-sm font-semibold mb-1'>Price (₹) {editingProduct.type === 'gaming' ? '(Set by Collection)' : '*'}</label>
+                  <input
+                    type='number'
+                    value={editingProduct.price || ''}
+                    onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})}
+                    className='w-full border rounded px-3 py-2'
+                    disabled={editingProduct.type === 'gaming'}
+                  />
+                  {editingProduct.type === 'gaming' && editingProduct.level && (
+                    <p className='text-xs text-gray-500 mt-1'>Level: {editingProduct.level} (Level cannot be changed after creation)</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
               <div>
-                <label className='block text-sm font-semibold mb-1'>Category</label>
-                <select
-                  value={editingProduct.category || ''}
-                  onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})}
-                  className='w-full border rounded px-3 py-2'
-                >
-                  <option value='Phone Case'>Phone Case</option>
-                  <option value='Phone Skin'>Phone Skin</option>
-                  <option value='Screen Protector'>Screen Protector</option>
-                  <option value='Full Body Wrap'>Full Body Wrap</option>
-                  <option value='Camera Protector'>Camera Protector</option>
-                  <option value='Combo Pack'>Combo Pack</option>
-                </select>
-              </div>
-              <div className='col-span-2'>
                 <label className='block text-sm font-semibold mb-1'>Description</label>
                 <textarea
                   value={editingProduct.description || ''}
@@ -542,7 +626,182 @@ const List = ({ token }) => {
                   className='w-full border rounded px-3 py-2 h-24'
                 />
               </div>
-              <div className='col-span-2 flex gap-2 justify-end'>
+
+              {/* Product Specifications */}
+              <div>
+                <h4 className='font-semibold text-gray-800 mb-3 border-b pb-2'>Product Specifications</h4>
+                <div className='grid grid-cols-3 gap-4'>
+                  <div>
+                    <label className='block text-sm font-semibold mb-1'>Category *</label>
+                    <select
+                      value={editingProduct.category || 'Phone Case'}
+                      onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})}
+                      className='w-full border rounded px-3 py-2'
+                    >
+                      <option value='Phone Case'>Phone Case</option>
+                      <option value='Phone Skin'>Phone Skin</option>
+                      <option value='Screen Protector'>Screen Protector</option>
+                      <option value='Full Body Wrap'>Full Body Wrap</option>
+                      <option value='Camera Protector'>Camera Protector</option>
+                      <option value='Combo Pack'>Combo Pack</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className='block text-sm font-semibold mb-1'>Material *</label>
+                    <select
+                      value={editingProduct.material || 'TPU'}
+                      onChange={(e) => setEditingProduct({...editingProduct, material: e.target.value})}
+                      className='w-full border rounded px-3 py-2'
+                    >
+                      <option value='TPU'>TPU</option>
+                      <option value='Silicone'>Silicone</option>
+                      <option value='Polycarbonate'>Polycarbonate</option>
+                      <option value='Leather'>Leather</option>
+                      <option value='PU Leather'>PU Leather</option>
+                      <option value='Metal'>Metal</option>
+                      <option value='Vinyl'>Vinyl</option>
+                      <option value='Tempered Glass'>Tempered Glass</option>
+                      <option value='Hybrid'>Hybrid</option>
+                      <option value='Aramid Fiber'>Aramid Fiber</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className='block text-sm font-semibold mb-1'>Finish</label>
+                    <select
+                      value={editingProduct.finish || 'Matte'}
+                      onChange={(e) => setEditingProduct({...editingProduct, finish: e.target.value})}
+                      className='w-full border rounded px-3 py-2'
+                    >
+                      <option value='Matte'>Matte</option>
+                      <option value='Glossy'>Glossy</option>
+                      <option value='Textured'>Textured</option>
+                      <option value='Transparent'>Transparent</option>
+                      <option value='Metallic'>Metallic</option>
+                      <option value='Carbon Fiber'>Carbon Fiber</option>
+                      <option value='Wood Grain'>Wood Grain</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Design Details */}
+              <div>
+                <h4 className='font-semibold text-gray-800 mb-3 border-b pb-2'>Design Details</h4>
+                <div className='grid grid-cols-2 gap-4'>
+                  <div>
+                    <label className='block text-sm font-semibold mb-1'>Design Type</label>
+                    <select
+                      value={editingProduct.design?.type || 'Solid Color'}
+                      onChange={(e) => setEditingProduct({
+                        ...editingProduct, 
+                        design: {...(editingProduct.design || {}), type: e.target.value}
+                      })}
+                      className='w-full border rounded px-3 py-2'
+                    >
+                      <option value='Solid Color'>Solid Color</option>
+                      <option value='Pattern'>Pattern</option>
+                      <option value='Custom Print'>Custom Print</option>
+                      <option value='Transparent'>Transparent</option>
+                      <option value='Gradient'>Gradient</option>
+                      <option value='Marble'>Marble</option>
+                      <option value='Abstract'>Abstract</option>
+                      <option value='Gaming Character'>Gaming Character</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className='block text-sm font-semibold mb-1'>Pattern (if applicable)</label>
+                    <input
+                      type='text'
+                      value={editingProduct.design?.pattern || ''}
+                      onChange={(e) => setEditingProduct({
+                        ...editingProduct,
+                        design: {...(editingProduct.design || {}), pattern: e.target.value}
+                      })}
+                      className='w-full border rounded px-3 py-2'
+                      placeholder='e.g., Stripes, Dots'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-semibold mb-1'>Primary Color</label>
+                    <input
+                      type='text'
+                      value={editingProduct.design?.color?.primary || ''}
+                      onChange={(e) => setEditingProduct({
+                        ...editingProduct,
+                        design: {
+                          ...(editingProduct.design || {}),
+                          color: {...(editingProduct.design?.color || {}), primary: e.target.value}
+                        }
+                      })}
+                      className='w-full border rounded px-3 py-2'
+                      placeholder='e.g., Red, Blue'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-semibold mb-1'>Secondary Color</label>
+                    <input
+                      type='text'
+                      value={editingProduct.design?.color?.secondary || ''}
+                      onChange={(e) => setEditingProduct({
+                        ...editingProduct,
+                        design: {
+                          ...(editingProduct.design || {}),
+                          color: {...(editingProduct.design?.color || {}), secondary: e.target.value}
+                        }
+                      })}
+                      className='w-full border rounded px-3 py-2'
+                      placeholder='e.g., White'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-semibold mb-1'>Hex Code</label>
+                    <input
+                      type='text'
+                      value={editingProduct.design?.color?.hexCode || ''}
+                      onChange={(e) => setEditingProduct({
+                        ...editingProduct,
+                        design: {
+                          ...(editingProduct.design || {}),
+                          color: {...(editingProduct.design?.color || {}), hexCode: e.target.value}
+                        }
+                      })}
+                      className='w-full border rounded px-3 py-2'
+                      placeholder='#000000'
+                    />
+                  </div>
+                  <div className='flex items-center'>
+                    <label className='flex items-center cursor-pointer'>
+                      <input
+                        type='checkbox'
+                        checked={editingProduct.design?.customizable || false}
+                        onChange={(e) => setEditingProduct({
+                          ...editingProduct,
+                          design: {...(editingProduct.design || {}), customizable: e.target.checked}
+                        })}
+                        className='w-4 h-4 mr-2'
+                      />
+                      <span className='text-sm font-semibold'>Customizable</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Features */}
+              <div>
+                <label className='block text-sm font-semibold mb-1'>Features (comma-separated)</label>
+                <textarea
+                  value={(editingProduct.Features || []).join(', ')}
+                  onChange={(e) => setEditingProduct({
+                    ...editingProduct,
+                    Features: e.target.value.split(',').map(f => f.trim()).filter(f => f)
+                  })}
+                  className='w-full border rounded px-3 py-2 h-20'
+                  placeholder='Shockproof, Wireless Charging Compatible, Raised Edges'
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className='flex gap-2 justify-end pt-4 border-t'>
                 <button
                   onClick={() => {
                     setShowProductModal(false)
@@ -553,12 +812,63 @@ const List = ({ token }) => {
                   Cancel
                 </button>
                 <button
-                  onClick={() => updateProduct(editingProduct._id || editingProduct.id, {
-                    name: editingProduct.name,
-                    price: editingProduct.price,
-                    category: editingProduct.category,
-                    description: editingProduct.description
-                  })}
+                  onClick={async () => {
+                    const formData = new FormData();
+                    formData.append('name', editingProduct.name);
+                    formData.append('description', editingProduct.description || '');
+                    formData.append('category', editingProduct.category);
+                    formData.append('material', editingProduct.material);
+                    formData.append('finish', editingProduct.finish);
+                    formData.append('level', editingProduct.level || '1');
+                    
+                    if (editingProduct.type !== 'gaming' && editingProduct.price) {
+                      formData.append('price', editingProduct.price);
+                    }
+                    
+                    // Design data
+                    if (editingProduct.design) {
+                      formData.append('designType', editingProduct.design.type || 'Solid Color');
+                      formData.append('pattern', editingProduct.design.pattern || '');
+                      formData.append('primaryColor', editingProduct.design.color?.primary || '');
+                      formData.append('secondaryColor', editingProduct.design.color?.secondary || '');
+                      formData.append('hexCode', editingProduct.design.color?.hexCode || '');
+                      formData.append('customizable', editingProduct.design.customizable || false);
+                    }
+                    
+                    // Features
+                    if (editingProduct.Features && editingProduct.Features.length > 0) {
+                      formData.append('features', editingProduct.Features.join(','));
+                    }
+                    
+                    // Image
+                    if (editingProduct.newImage) {
+                      formData.append('image1', editingProduct.newImage);
+                    }
+
+                    try {
+                      const response = await axios.patch(
+                        backendUrl + `/api/products/${editingProduct._id || editingProduct.id}`,
+                        formData,
+                        {
+                          headers: {
+                            'Content-Type': 'multipart/form-data'
+                          }
+                        }
+                      );
+
+                      if (response.data.success) {
+                        toast.success('Product updated successfully');
+                        setShowProductModal(false);
+                        setEditingProduct(null);
+                        await fetchAllData();
+                      } else {
+                        toast.error(response.data.message || 'Failed to update product');
+                      }
+                    } catch (error) {
+                      console.error('Update product error:', error);
+                      toast.error(error.response?.data?.message || error.message || 'Failed to update product');
+                    }
+                  }}
                   className='px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600'
                 >
                   Save Changes

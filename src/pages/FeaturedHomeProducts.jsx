@@ -3,31 +3,29 @@ import axios from 'axios';
 import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
 
-const SuggestedProducts = ({ token }) => {
-  const [suggestedProducts, setSuggestedProducts] = useState([]);
+const FeaturedHomeProducts = ({ token }) => {
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
   // Form states
   const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [description, setDescription] = useState('');
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [displayOrder, setDisplayOrder] = useState('0');
   const [isActive, setIsActive] = useState(true);
 
-  // Fetch all suggested products
-  const fetchSuggestedProducts = async () => {
+  // Fetch all products
+  const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${backendUrl}/api/suggested-products`);
+      const response = await axios.get(`${backendUrl}/api/featured-home-products`);
       if (response.data.success) {
-        setSuggestedProducts(response.data.data);
+        setProducts(response.data.data);
       }
     } catch (error) {
-      toast.error('Failed to fetch suggested products');
+      toast.error('Failed to fetch featured products');
       console.error(error);
     } finally {
       setLoading(false);
@@ -35,7 +33,7 @@ const SuggestedProducts = ({ token }) => {
   };
 
   useEffect(() => {
-    fetchSuggestedProducts();
+    fetchProducts();
   }, []);
 
   // Handle image upload
@@ -50,8 +48,6 @@ const SuggestedProducts = ({ token }) => {
   // Reset form
   const resetForm = () => {
     setName('');
-    setPrice('');
-    setDescription('');
     setImage(null);
     setImagePreview('');
     setDisplayOrder('0');
@@ -63,8 +59,6 @@ const SuggestedProducts = ({ token }) => {
   // Handle edit
   const handleEdit = (product) => {
     setName(product.name);
-    setPrice(product.price.toString());
-    setDescription(product.description || '');
     setImagePreview(product.image || '');
     setDisplayOrder(product.displayOrder?.toString() || '0');
     setIsActive(product.isActive !== false);
@@ -76,8 +70,14 @@ const SuggestedProducts = ({ token }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!name || !price) {
-      toast.error('Please fill in name and price');
+    if (!name) {
+      toast.error('Please enter product name');
+      return;
+    }
+
+    // Check if trying to add more than 2 products
+    if (!editingProduct && products.length >= 2) {
+      toast.error('Maximum 2 featured products allowed. Please delete an existing product first.');
       return;
     }
 
@@ -90,8 +90,6 @@ const SuggestedProducts = ({ token }) => {
       setLoading(true);
       const formData = new FormData();
       formData.append('name', name);
-      formData.append('price', Number(price));
-      formData.append('description', description);
       formData.append('displayOrder', Number(displayOrder));
       formData.append('isActive', isActive);
 
@@ -102,7 +100,7 @@ const SuggestedProducts = ({ token }) => {
       let response;
       if (editingProduct) {
         response = await axios.put(
-          `${backendUrl}/api/suggested-products/${editingProduct._id}`,
+          `${backendUrl}/api/featured-home-products/${editingProduct._id}`,
           formData,
           {
             headers: {
@@ -113,7 +111,7 @@ const SuggestedProducts = ({ token }) => {
         );
       } else {
         response = await axios.post(
-          `${backendUrl}/api/suggested-products`,
+          `${backendUrl}/api/featured-home-products`,
           formData,
           {
             headers: {
@@ -126,7 +124,7 @@ const SuggestedProducts = ({ token }) => {
 
       if (response.data.success) {
         toast.success(response.data.message);
-        fetchSuggestedProducts();
+        fetchProducts();
         resetForm();
       } else {
         toast.error(response.data.message);
@@ -141,23 +139,23 @@ const SuggestedProducts = ({ token }) => {
 
   // Handle delete
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this suggested product?')) {
+    if (!window.confirm('Are you sure you want to delete this featured product?')) {
       return;
     }
 
     try {
       setLoading(true);
       const response = await axios.delete(
-        `${backendUrl}/api/suggested-products/${id}`,
+        `${backendUrl}/api/featured-home-products/${id}`,
         { headers: { 'token': token } }
       );
 
       if (response.data.success) {
-        toast.success('Suggested product deleted successfully');
-        fetchSuggestedProducts();
+        toast.success('Featured product deleted successfully');
+        fetchProducts();
       }
     } catch (error) {
-      toast.error('Failed to delete suggested product');
+      toast.error('Failed to delete featured product');
       console.error(error);
     } finally {
       setLoading(false);
@@ -168,22 +166,27 @@ const SuggestedProducts = ({ token }) => {
     <div className="p-6">
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
-          <h1 className="text-2xl font-bold">Suggested Products</h1>
+          <h1 className="text-2xl font-bold">Featured Home Products</h1>
           <button
             onClick={() => {
               if (showForm) {
                 resetForm();
               } else {
+                if (products.length >= 2) {
+                  toast.warning('Maximum 2 featured products allowed. Please delete one first.');
+                  return;
+                }
                 setShowForm(true);
               }
             }}
-            className="px-4 py-2 rounded bg-blue-500 hover:bg-blue-600 text-white"
+            className={`px-4 py-2 rounded ${products.length >= 2 ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+            disabled={products.length >= 2 && !showForm}
           >
-            {showForm ? 'Cancel' : '+ Add Suggested Product'}
+            {showForm ? 'Cancel' : '+ Add Featured Product'}
           </button>
         </div>
         <p className="text-sm text-gray-600">
-          Manage products that will be suggested to customers throughout the site.
+          Add up to 2 featured products to display at the top of the home page collections section. ({products.length}/2 used)
         </p>
       </div>
 
@@ -195,40 +198,15 @@ const SuggestedProducts = ({ token }) => {
           </h2>
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="md:col-span-2">
                 <label className="block mb-2 font-medium">Product Name *</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., Premium Screen Protector"
+                  placeholder="e.g., Premium Phone Skin"
                   required
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 font-medium">Price (₹) *</label>
-                <input
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="99"
-                  min="0"
-                  step="1"
-                  required
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block mb-2 font-medium">Description</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Brief description..."
-                  rows="3"
                 />
               </div>
 
@@ -258,7 +236,7 @@ const SuggestedProducts = ({ token }) => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block mb-2 font-medium">Image *</label>
+                <label className="block mb-2 font-medium">Product Image *</label>
                 <div className="flex items-center gap-4">
                   <label className="cursor-pointer bg-gray-100 px-4 py-2 rounded border hover:bg-gray-200">
                     <input
@@ -308,27 +286,26 @@ const SuggestedProducts = ({ token }) => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Image</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {loading && suggestedProducts.length === 0 ? (
+            {loading && products.length === 0 ? (
               <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
                   Loading...
                 </td>
               </tr>
-            ) : suggestedProducts.length === 0 ? (
+            ) : products.length === 0 ? (
               <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
                   No featured products found. Add up to 2 products to display on the home page.
                 </td>
               </tr>
             ) : (
-              suggestedProducts.map((product) => (
+              products.map((product) => (
                 <tr key={product._id}>
                   <td className="px-6 py-4">
                     {product.image ? (
@@ -345,11 +322,7 @@ const SuggestedProducts = ({ token }) => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="font-medium">{product.name}</div>
-                    {product.description && (
-                      <div className="text-sm text-gray-500 line-clamp-1">{product.description}</div>
-                    )}
                   </td>
-                  <td className="px-6 py-4">₹{product.price}</td>
                   <td className="px-6 py-4">{product.displayOrder}</td>
                   <td className="px-6 py-4">
                     <span
@@ -366,13 +339,13 @@ const SuggestedProducts = ({ token }) => {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEdit(product)}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(product._id)}
-                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
                       >
                         Delete
                       </button>
@@ -388,4 +361,4 @@ const SuggestedProducts = ({ token }) => {
   );
 };
 
-export default SuggestedProducts;
+export default FeaturedHomeProducts;

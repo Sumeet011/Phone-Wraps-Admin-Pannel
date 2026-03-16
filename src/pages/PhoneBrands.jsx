@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { toast } from 'react-toastify';
+import axios from 'axios';
+import { backendUrl } from '../App';
+import api from '../utils/api';
+import API_ENDPOINTS from '../config/api';
 
 const PhoneBrands = () => {
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showModelModal, setShowModelModal] = useState(false);
+  const [showEditModelModal, setShowEditModelModal] = useState(false);
   const [editingBrand, setEditingBrand] = useState(null);
   const [selectedBrand, setSelectedBrand] = useState(null);
+  const [editingModel, setEditingModel] = useState(null);
   
   const [brandForm, setBrandForm] = useState({
     brandName: '',
@@ -16,22 +21,27 @@ const PhoneBrands = () => {
   });
 
   const [modelForm, setModelForm] = useState({
-    modelName: ''
+    modelName: '',
+    backCoversCount: '',
+    aluminumSheetsCount: ''
   });
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+  const [editModelForm, setEditModelForm] = useState({
+    modelName: '',
+    backCoversCount: '',
+    aluminumSheetsCount: ''
+  });
 
   // Fetch all brands
   const fetchBrands = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${backendUrl}/api/phone-brands`);
-      if (response.data.success) {
-        setBrands(response.data.data);
+      const response = await api.get(API_ENDPOINTS.PHONE_BRANDS.LIST);
+      if (response.success) {
+        setBrands(response.data || []);
       }
     } catch (error) {
-      toast.error('Failed to fetch phone brands');
-      console.error(error);
+      console.error('Error fetching phone brands:', error);
     } finally {
       setLoading(false);
     }
@@ -51,32 +61,28 @@ const PhoneBrands = () => {
     }
 
     try {
+      let response;
       if (editingBrand) {
         // Update existing brand
-        const response = await axios.put(
-          `${backendUrl}/api/phone-brands/${editingBrand._id}`,
+        response = await api.put(
+          API_ENDPOINTS.PHONE_BRANDS.UPDATE(editingBrand._id),
           brandForm
         );
-        if (response.data.success) {
-          toast.success('Brand updated successfully');
-          fetchBrands();
-          closeModal();
-        }
       } else {
         // Create new brand
-        const response = await axios.post(
-          `${backendUrl}/api/phone-brands`,
+        response = await api.post(
+          API_ENDPOINTS.PHONE_BRANDS.CREATE,
           brandForm
         );
-        if (response.data.success) {
-          toast.success('Brand created successfully');
-          fetchBrands();
-          closeModal();
-        }
+      }
+      
+      if (response.success) {
+        toast.success(editingBrand ? 'Brand updated successfully' : 'Brand created successfully');
+        fetchBrands();
+        closeModal();
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to save brand');
-      console.error(error);
+      console.error('Error saving brand:', error);
     }
   };
 
@@ -92,7 +98,11 @@ const PhoneBrands = () => {
       models: [...brandForm.models, { ...modelForm }]
     });
 
-    setModelForm({ modelName: '' });
+    setModelForm({ 
+      modelName: '',
+      backCoversCount: 0,
+      aluminumSheetsCount: 0
+    });
   };
 
   // Handle model addition to existing brand
@@ -117,6 +127,45 @@ const PhoneBrands = () => {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to add model');
+      console.error(error);
+    }
+  };
+
+  // Open edit model modal
+  const handleEditModel = (brand, model) => {
+    setSelectedBrand(brand);
+    setEditingModel(model);
+    setEditModelForm({
+      modelName: model.modelName,
+      backCoversCount: model.backCoversCount || 0,
+      aluminumSheetsCount: model.aluminumSheetsCount || 0
+    });
+    setShowEditModelModal(true);
+  };
+
+  // Handle model update
+  const handleUpdateModel = async (e) => {
+    e.preventDefault();
+
+    if (!editModelForm.modelName) {
+      toast.error('Model name is required');
+      return;
+    }
+
+    try {
+      const response = await axios.put(
+        `${backendUrl}/api/phone-brands/${selectedBrand._id}/models/${editingModel._id}`,
+        editModelForm
+      );
+      if (response.data.success) {
+        toast.success('Model updated successfully');
+        fetchBrands();
+        setShowEditModelModal(false);
+        setEditingModel(null);
+        setEditModelForm({ modelName: '', backCoversCount: '', aluminumSheetsCount: '' });
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update model');
       console.error(error);
     }
   };
@@ -212,7 +261,11 @@ const PhoneBrands = () => {
   // Open model modal
   const openModelModal = (brand) => {
     setSelectedBrand(brand);
-    setModelForm({ modelName: '' });
+    setModelForm({ 
+      modelName: '',
+      backCoversCount: '',
+      aluminumSheetsCount: ''
+    });
     setShowModelModal(true);
   };
 
@@ -248,29 +301,47 @@ const PhoneBrands = () => {
         </button>
       </div>
 
-      {/* Brands Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Brands List */}
+      <div className="space-y-6">
         {brands.map((brand) => (
           <div
             key={brand._id}
-            className={`bg-white rounded-lg shadow-md p-6 border-2 ${
+            className={`bg-white rounded-lg shadow-md border-2 ${
               brand.isActive ? 'border-green-200' : 'border-gray-200'
             }`}
           >
             {/* Brand Header */}
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                  {brand.brandName}
-                </h3>
+            <div className="flex justify-between items-center px-6 py-4 border-b bg-gray-50">
+              <div className="flex items-center gap-3">
+                <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <h3 className="text-2xl font-bold text-gray-800">{brand.brandName}</h3>
+                <button
+                  onClick={() => handleToggleStatus(brand._id)}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    brand.isActive
+                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {brand.isActive ? 'Active' : 'Inactive'}
+                </button>
               </div>
               <div className="flex gap-2">
                 <button
+                  onClick={() => openModelModal(brand)}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2"
+                  title="Add Model"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Model
+                </button>
+                <button
                   onClick={() => handleEdit(brand)}
-                  className="text-blue-500 hover:text-blue-700"
+                  className="text-blue-500 hover:text-blue-700 p-2"
                   title="Edit Brand"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -279,7 +350,7 @@ const PhoneBrands = () => {
                 </button>
                 <button
                   onClick={() => handleDeleteBrand(brand._id)}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-red-500 hover:text-red-700 p-2"
                   title="Delete Brand"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -289,64 +360,62 @@ const PhoneBrands = () => {
               </div>
             </div>
 
-            {/* Status Badge */}
-            <div className="mb-4">
-              <button
-                onClick={() => handleToggleStatus(brand._id)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  brand.isActive
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {brand.isActive ? 'Active' : 'Inactive'}
-              </button>
-            </div>
-
-            {/* Models List */}
-            <div className="mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="font-semibold text-gray-700">
-                  Models ({brand.models?.length || 0})
-                </h4>
-                <button
-                  onClick={() => openModelModal(brand)}
-                  className="text-blue-500 hover:text-blue-700 text-sm flex items-center gap-1"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Add
-                </button>
+            {/* Models Table */}
+            {brand.models && brand.models.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b-2 border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-bold text-gray-700">Model</th>
+                      <th className="px-6 py-3 text-center text-sm font-bold text-gray-700">Cover Count</th>
+                      <th className="px-6 py-3 text-center text-sm font-bold text-gray-700">Plates Count</th>
+                      <th className="px-6 py-3 text-center text-sm font-bold text-gray-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {brand.models.map((model, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 text-sm font-medium text-gray-800">{model.modelName}</td>
+                        <td className="px-6 py-4 text-sm text-center">
+                          <span className="inline-flex items-center justify-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">
+                            {model.backCoversCount || 0}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-center">
+                          <span className="inline-flex items-center justify-center px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">
+                            {model.aluminumSheetsCount || 0}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-center">
+                          <button
+                            onClick={() => handleEditModel(brand, model)}
+                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-2 rounded mr-2"
+                            title="Edit Model"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteModel(brand._id, model.modelName)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded"
+                            title="Delete Model"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {brand.models && brand.models.length > 0 ? (
-                  brand.models.map((model, idx) => (
-                    <div
-                      key={idx}
-                      className="flex justify-between items-center bg-gray-50 p-2 rounded"
-                    >
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-800">
-                          {model.modelName}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteModel(brand._id, model.modelName)}
-                        className="text-red-400 hover:text-red-600"
-                        title="Delete Model"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-400 italic">No models added yet</p>
-                )}
+            ) : (
+              <div className="px-6 py-8 text-center">
+                <p className="text-gray-400 italic">No models added yet</p>
               </div>
-            </div>
+            )}
           </div>
         ))}
       </div>
@@ -392,47 +461,91 @@ const PhoneBrands = () => {
                 <label className="block text-gray-700 font-medium mb-2">
                   Add Models
                 </label>
-                <div className="flex gap-2 mb-3">
+                <div className="space-y-3 mb-3">
                   <input
                     type="text"
                     value={modelForm.modelName}
                     onChange={(e) =>
-                      setModelForm({ modelName: e.target.value })
+                      setModelForm({ ...modelForm, modelName: e.target.value })
                     }
-                    className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Model name (e.g., iPhone 15 Pro, Galaxy S24)"
                   />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Back Covers Stock</label>
+                      <input
+                        type="number"
+                        value={modelForm.backCoversCount}
+                        onChange={(e) =>
+                          setModelForm({ ...modelForm, backCoversCount: parseInt(e.target.value) || 0 })
+                        }
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Aluminum Sheets Stock</label>
+                      <input
+                        type="number"
+                        value={modelForm.aluminumSheetsCount}
+                        onChange={(e) =>
+                          setModelForm({ ...modelForm, aluminumSheetsCount: parseInt(e.target.value) || 0 })
+                        }
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0"
+                        min="0"
+                      />
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={handleAddModel}
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+                    className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
+                    Add Model to List
                   </button>
                 </div>
 
                 {/* Models List */}
                 {brandForm.models.length > 0 && (
                   <div className="border border-gray-200 rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <p className="text-sm text-gray-600 mb-2 font-medium">Models to be added ({brandForm.models.length}):</p>
                     {brandForm.models.map((model, idx) => (
                       <div
                         key={idx}
-                        className="flex justify-between items-center bg-gray-50 p-2 rounded mb-2"
+                        className="bg-gray-50 p-3 rounded mb-2"
                       >
-                        <div>
+                        <div className="flex justify-between items-start mb-2">
                           <p className="text-sm font-medium">{model.modelName}</p>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveModelFromForm(idx)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveModelFromForm(idx)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="flex items-center gap-1 text-blue-600">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                            <span>Back Covers: <strong>{model.backCoversCount || 0}</strong></span>
+                          </div>
+                          <div className="flex items-center gap-1 text-purple-600">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                            </svg>
+                            <span>Al. Sheets: <strong>{model.aluminumSheetsCount || 0}</strong></span>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -490,11 +603,43 @@ const PhoneBrands = () => {
                   type="text"
                   value={modelForm.modelName}
                   onChange={(e) =>
-                    setModelForm({ modelName: e.target.value })
+                    setModelForm({ ...modelForm, modelName: e.target.value })
                   }
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g., iPhone 15 Pro, Galaxy S24"
                   required
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-2">
+                  Back Covers Stock
+                </label>
+                <input
+                  type="number"
+                  value={modelForm.backCoversCount}
+                  onChange={(e) =>
+                    setModelForm({ ...modelForm, backCoversCount: parseInt(e.target.value) || 0 })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter back covers stock quantity"
+                  min="0"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-2">
+                  Aluminum Sheets Stock
+                </label>
+                <input
+                  type="number"
+                  value={modelForm.aluminumSheetsCount}
+                  onChange={(e) =>
+                    setModelForm({ ...modelForm, aluminumSheetsCount: parseInt(e.target.value) || 0 })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter aluminum sheets stock quantity"
+                  min="0"
                 />
               </div>
 
@@ -511,6 +656,93 @@ const PhoneBrands = () => {
                   className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
                 >
                   Add Model
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Model Modal */}
+      {showEditModelModal && editingModel && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="border-b px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-800">
+                Edit Model: {editingModel.modelName}
+              </h2>
+              <button
+                onClick={() => setShowEditModelModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateModel} className="p-6">
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-2">
+                  Model Name *
+                </label>
+                <input
+                  type="text"
+                  value={editModelForm.modelName}
+                  onChange={(e) =>
+                    setEditModelForm({ ...editModelForm, modelName: e.target.value })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., iPhone 15 Pro, Galaxy S24"
+                  required
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-2">
+                  Back Covers Stock
+                </label>
+                <input
+                  type="number"
+                  value={editModelForm.backCoversCount}
+                  onChange={(e) =>
+                    setEditModelForm({ ...editModelForm, backCoversCount: parseInt(e.target.value) || 0 })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter back covers stock quantity"
+                  min="0"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-2">
+                  Aluminum Sheets Stock
+                </label>
+                <input
+                  type="number"
+                  value={editModelForm.aluminumSheetsCount}
+                  onChange={(e) =>
+                    setEditModelForm({ ...editModelForm, aluminumSheetsCount: parseInt(e.target.value) || 0 })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter aluminum sheets stock quantity"
+                  min="0"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModelModal(false)}
+                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
+                >
+                  Update Model
                 </button>
               </div>
             </form>

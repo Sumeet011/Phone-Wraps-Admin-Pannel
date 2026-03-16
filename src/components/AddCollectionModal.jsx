@@ -4,21 +4,54 @@ import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
 import { assets } from '../assets/assets';
 
-const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, collectionType: initialCollectionType = 'gaming' }) => {
+const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, collectionType: initialCollectionType = 'gaming', allowTypeChange = false }) => {
   const [collectionName, setCollectionName] = useState('');
   const [description, setDescription] = useState('');
   const [collectionType, setCollectionType] = useState(initialCollectionType);
   const [price, setPrice] = useState('');
   const [platePrice, setPlatePrice] = useState('');
   const [heroImage, setHeroImage] = useState(null);
+  const [features, setFeatures] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState(groupId || '');
+  const [groups, setGroups] = useState([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Update collection type when modal opens or initialCollectionType changes
   useEffect(() => {
     if (isOpen) {
       setCollectionType(initialCollectionType);
+      setSelectedGroup(groupId || '');
+      // Fetch groups only for gaming collections
+      if (initialCollectionType === 'gaming') {
+        fetchGroups();
+      }
     }
-  }, [isOpen, initialCollectionType]);
+  }, [isOpen, initialCollectionType, groupId]);
+
+  // Fetch groups when collection type changes to gaming
+  useEffect(() => {
+    if (isOpen && collectionType === 'gaming' && !groupId && groups.length === 0) {
+      fetchGroups();
+    }
+  }, [collectionType, isOpen, groupId]);
+
+  const fetchGroups = async () => {
+    try {
+      setLoadingGroups(true);
+      const response = await axios.get(backendUrl + '/api/groups');
+      if (response.data.success) {
+        setGroups(response.data.items || response.data.groups || response.data.data || []);
+      } else {
+        toast.error('Failed to fetch groups');
+      }
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+      toast.error('Failed to fetch groups');
+    } finally {
+      setLoadingGroups(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,9 +60,15 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
       toast.error('Please enter a collection name');
       return;
     }
+
+    // For gaming collections, group selection is required
+    if (collectionType === 'gaming' && !selectedGroup) {
+      toast.error('Please select a group for gaming collection');
+      return;
+    }
     
-    if (collectionType === 'gaming' && (!price || Number(price) <= 0)) {
-      toast.error('Please enter a valid price for gaming collection');
+    if ((collectionType === 'gaming' || collectionType === 'swap-wrap') && (!price || Number(price) <= 0)) {
+      toast.error('Please enter a valid price for gaming/swap-wrap collection');
       return;
     }
 
@@ -42,16 +81,25 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
         formData.append('description', description.trim());
       }
       formData.append('type', collectionType);
-      if (collectionType === 'gaming' && price) {
+      if ((collectionType === 'gaming' || collectionType === 'swap-wrap') && price) {
         formData.append('price', Number(price));
       }
-      if (collectionType === 'gaming' && platePrice) {
+      if ((collectionType === 'gaming' || collectionType === 'swap-wrap') && platePrice) {
         formData.append('plateprice', Number(platePrice));
       }
       
-      // If groupId is provided, include it to associate collection with the group
-      if (groupId) {
-        formData.append('groupId', groupId);
+      // Add features if provided
+      if (features.trim()) {
+        const featuresArray = features.split(',').map(f => f.trim()).filter(f => f);
+        featuresArray.forEach(feature => {
+          formData.append('features[]', feature);
+        });
+      }
+      
+      // Use selected group for gaming collections
+      const finalGroupId = collectionType === 'gaming' ? selectedGroup : groupId;
+      if (finalGroupId) {
+        formData.append('groupId', finalGroupId);
       }
       
       if (heroImage) {
@@ -68,9 +116,9 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
         const newCollectionId = response.data.data?._id || response.data.data?.id;
         
         // If groupId is provided and we have the new collection ID, add it to the group
-        if (groupId && newCollectionId) {
+        if (finalGroupId && newCollectionId) {
           try {
-            await axios.post(backendUrl + `/api/groups/${groupId}/collections`, {
+            await axios.post(backendUrl + `/api/groups/${finalGroupId}/collections`, {
               collectionId: newCollectionId
             });
             toast.success('Collection created and added to group successfully!');
@@ -86,7 +134,9 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
         setDescription('');
         setPrice('');
         setPlatePrice('');
+        setFeatures('');
         setHeroImage(null);
+        setSelectedGroup('');
         onCollectionAdded(); // Refresh the collections list
         onClose();
       } else {
@@ -106,7 +156,9 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
     setCollectionType(initialCollectionType);
     setPrice('');
     setPlatePrice('');
+    setFeatures('');
     setHeroImage(null);
+    setSelectedGroup('');
     onClose();
   };
 
@@ -157,8 +209,9 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
             />
           </div>
 
-          {/* Collection Type - Only show if context is not set */}
-          {!groupId && initialCollectionType === 'gaming' && (
+         
+          {/* Collection Type - Only show when type change is allowed */}
+          {allowTypeChange && (
             <div className="mb-4">
               <label className="block text-gray-700 font-medium mb-2">
                 Collection Type *
@@ -171,20 +224,53 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
                 disabled={isSubmitting}
               >
                 <option value="gaming">Gaming Collection</option>
-                <option value="normal">Standard Collection</option>
+                <option value="swap-wrap">Swap-Wrap Collection</option>
+                <option value="normal">Other Collection</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Gaming collections require groups, Standard collections do not
+                Gaming and Swap-Wrap collections require pricing
               </p>
             </div>
           )}
 
-          {/* Price for Gaming Collections */}
-          {collectionType === 'gaming' && (
+          {/* Group Selection - Show for gaming collections when groupId is not set */}
+          {!groupId && collectionType === 'gaming' && (
+            <div className="mb-4">
+              <label className="block text-gray-700 font-medium mb-2">
+                Gaming Group *
+              </label>
+              <select
+                value={selectedGroup}
+                onChange={(e) => setSelectedGroup(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                required
+                disabled={isSubmitting || loadingGroups}
+              >
+                <option value="">Select a group...</option>
+                {groups.map((group) => (
+                  <option key={group._id} value={group._id}>
+                    {group.name || group.groupName || 'Unnamed Group'}
+                  </option>
+                ))}
+              </select>
+              {loadingGroups && (
+                <p className="text-xs text-blue-500 mt-1">Loading groups...</p>
+              )}
+              {!loadingGroups && groups.length === 0 && (
+                <p className="text-xs text-red-500 mt-1">No groups available. Please create a group first.</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Gaming collections must belong to a group
+              </p>
+            </div>
+          )}
+
+          {/* Price for Gaming/Swap-Wrap Collections */}
+          {(collectionType === 'gaming' || collectionType === 'swap-wrap') && (
             <>
               <div className="mb-4">
                 <label className="block text-gray-700 font-medium mb-2">
-                  Collection Price (₹) *
+                  Plates+Cover Price (₹) *
                 </label>
                 <input
                   type="number"
@@ -198,7 +284,9 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
                   disabled={isSubmitting}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  This price applies to the entire collection (all 5 cards)
+                  {collectionType === 'gaming' 
+                    ? 'This price applies to the entire collection (all 5 cards)'
+                    : 'Base price for backcover + plates (swap-wrap collection)'}
                 </p>
               </div>
 
@@ -217,7 +305,26 @@ const AddCollectionModal = ({ isOpen, onClose, onCollectionAdded, groupId, colle
                   disabled={isSubmitting}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Optional: Additional plate/accessory price for gaming collection
+                  {collectionType === 'gaming'
+                    ? 'Optional: Additional plate/accessory price for gaming collection'
+                    : 'Optional: Additional plate/accessory price'}
+                </p>
+              </div>
+
+              {/* Features for Gaming Collections */}
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-2">
+                  Features (Optional)
+                </label>
+                <textarea
+                  value={features}
+                  onChange={(e) => setFeatures(e.target.value)}
+                  placeholder="e.g., Shockproof, Wireless Charging Compatible, Raised Edges (comma-separated)"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none min-h-[80px]"
+                  disabled={isSubmitting}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter features separated by commas
                 </p>
               </div>
             </>

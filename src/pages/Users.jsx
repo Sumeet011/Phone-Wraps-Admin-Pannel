@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import { toast } from 'react-toastify';
+import api from '../utils/api';
+import API_ENDPOINTS from '../config/api';
+import { formatCurrency, formatDate, getStatusColorClass } from '../utils/helpers';
 
 const Users = ({ token }) => {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedUser, setExpandedUser] = useState(null);
@@ -12,27 +13,13 @@ const Users = ({ token }) => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const apiUrl = `${backendUrl}/api/users/all`;
-      console.log('Backend URL:', backendUrl);
-      console.log('Full API URL:', apiUrl);
-      console.log('Token:', token);
+      const response = await api.get(API_ENDPOINTS.USERS.GET_ALL, { token });
       
-      const response = await axios.get(apiUrl, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      console.log('API Response:', response.data);
-      
-      if (response.data.success) {
-        console.log('Users data:', response.data.data);
-        setUsers(response.data.data);
-      } else {
-        console.log('API returned success: false');
+      if (response.success) {
+        setUsers(response.data || []);
       }
     } catch (error) {
       console.error('Error fetching users:', error);
-      console.error('Error response:', error.response);
-      toast.error(error.response?.data?.message || 'Failed to fetch users');
     } finally {
       setLoading(false);
     }
@@ -44,42 +31,14 @@ const Users = ({ token }) => {
     }
   }, [token]);
 
-  const toggleUserExpand = (userId) => {
-    setExpandedUser(expandedUser === userId ? null : userId);
-  };
-
   const filteredUsers = users.filter(user => 
     user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.phoneNumber?.includes(searchTerm)
   );
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      'Delivered': 'bg-green-100 text-green-800',
-      'Shipped': 'bg-blue-100 text-blue-800',
-      'Processing': 'bg-yellow-100 text-yellow-800',
-      'Pending': 'bg-gray-100 text-gray-800',
-      'Cancelled': 'bg-red-100 text-red-800',
-      'Confirmed': 'bg-purple-100 text-purple-800'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+  const toggleUserExpand = (userId) => {
+    setExpandedUser(expandedUser === userId ? null : userId);
   };
 
   if (loading) {

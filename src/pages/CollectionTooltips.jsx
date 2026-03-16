@@ -1,7 +1,7 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
-import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
+import api from '../utils/api';
+import API_ENDPOINTS from '../config/api';
 
 const CollectionTooltips = ({ token }) => {
   const [tooltips, setTooltips] = useState([]);
@@ -16,18 +16,17 @@ const CollectionTooltips = ({ token }) => {
   const fetchTooltips = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(backendUrl + '/api/collection-tooltips');
+      const response = await api.get(API_ENDPOINTS.COLLECTION_TOOLTIPS.LIST);
       
-      if (response.data.success) {
+      if (response.success) {
         // Sort tooltips by quantity
-        const sortedTooltips = response.data.data.tooltips.sort((a, b) => a.quantity - b.quantity);
+        const sortedTooltips = response.data.tooltips.sort((a, b) => a.quantity - b.quantity);
         setTooltips(sortedTooltips);
       } else {
         toast.error('Failed to fetch tooltips');
       }
     } catch (error) {
       console.error('Error fetching tooltips:', error);
-      toast.error(error.response?.data?.message || 'Failed to fetch tooltips');
     } finally {
       setLoading(false);
     }
@@ -55,21 +54,20 @@ const CollectionTooltips = ({ token }) => {
         return;
       }
 
-      const response = await axios.put(
-        backendUrl + '/api/collection-tooltips',
+      const response = await api.put(
+        API_ENDPOINTS.COLLECTION_TOOLTIPS.LIST,
         { tooltips },
-        { headers: { token } }
+        { token }
       );
 
-      if (response.data.success) {
+      if (response.success) {
         toast.success('Collection tooltips updated successfully!');
         fetchTooltips(); // Refresh data
       } else {
-        toast.error(response.data.message || 'Failed to update tooltips');
+        toast.error(response.message || 'Failed to update tooltips');
       }
     } catch (error) {
       console.error('Error updating tooltips:', error);
-      toast.error(error.response?.data?.message || 'Failed to update tooltips');
     } finally {
       setSaving(false);
     }

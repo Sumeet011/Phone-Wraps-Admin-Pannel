@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
+import api from '../utils/api';
+import API_ENDPOINTS, { getBackendUrl } from '../config/api';
 
 // Circular Gallery Images Section Component
-const CircularGallerySection = ({ token, backendUrl, settings, handleInputChange }) => {
+const CircularGallerySection = ({ token, settings, handleInputChange }) => {
   const [circularImages, setCircularImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
@@ -16,9 +16,11 @@ const CircularGallerySection = ({ token, backendUrl, settings, handleInputChange
 
   const fetchCircularImages = async () => {
     try {
-      const response = await axios.get(`${backendUrl}/api/design-assets?category=CIRCULAR&isActive=true`);
-      if (response.data.success) {
-        setCircularImages(response.data.items || []);
+      const response = await api.get(API_ENDPOINTS.DESIGN_ASSETS.LIST, {
+        params: { category: 'CIRCULAR', isActive: 'true' }
+      });
+      if (response.success) {
+        setCircularImages(response.items || []);
       }
     } catch (error) {
       console.error('Error fetching circular images:', error);
@@ -51,18 +53,13 @@ const CircularGallerySection = ({ token, backendUrl, settings, handleInputChange
       formData.append('name', `Gallery Image ${Date.now()}`);
       formData.append('isActive', 'true');
 
-      const response = await axios.post(
-        `${backendUrl}/api/design-assets`,
+      const response = await api.post(
+        API_ENDPOINTS.DESIGN_ASSETS.CREATE,
         formData,
-        { 
-          headers: { 
-            token, 
-            'Content-Type': 'multipart/form-data' 
-          } 
-        }
+        { token, isMultipart: true }
       );
 
-      if (response.data.success) {
+      if (response.success) {
         toast.success('Image uploaded successfully!');
         setSelectedFile(null);
         setImagePreview(null);
@@ -70,7 +67,6 @@ const CircularGallerySection = ({ token, backendUrl, settings, handleInputChange
       }
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error('Failed to upload image');
     } finally {
       setUploading(false);
     }
@@ -82,18 +78,17 @@ const CircularGallerySection = ({ token, backendUrl, settings, handleInputChange
     }
 
     try {
-      const response = await axios.delete(
-        `${backendUrl}/api/design-assets/${id}`,
-        { headers: { token } }
+      const response = await api.delete(
+        API_ENDPOINTS.DESIGN_ASSETS.DELETE(id),
+        { token }
       );
 
-      if (response.data.success) {
+      if (response.success) {
         toast.success('Image deleted successfully!');
         fetchCircularImages();
       }
     } catch (error) {
       console.error('Error deleting image:', error);
-      toast.error('Failed to delete image');
     }
   };
 
@@ -179,7 +174,7 @@ const CircularGallerySection = ({ token, backendUrl, settings, handleInputChange
 };
 
 // Carousel Images Section Component
-const CarouselImagesSection = ({ token, backendUrl }) => {
+const CarouselImagesSection = ({ token }) => {
   const [carouselImages, setCarouselImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
@@ -191,9 +186,12 @@ const CarouselImagesSection = ({ token, backendUrl }) => {
 
   const fetchCarouselImages = async () => {
     try {
-      const response = await axios.get(`${backendUrl}/api/design-assets?category=CARD&isActive=true`);
-      if (response.data.success) {
-        setCarouselImages(response.data.items || []);
+      const response = await api.get(API_ENDPOINTS.DESIGN_ASSETS.LIST, {
+        params: { category: 'CARD', isActive: 'true' },
+        token
+      });
+      if (response.success) {
+        setCarouselImages(response.items || []);
       }
     } catch (error) {
       console.error('Error fetching carousel images:', error);
@@ -226,18 +224,13 @@ const CarouselImagesSection = ({ token, backendUrl }) => {
       formData.append('name', `Carousel Image ${Date.now()}`);
       formData.append('isActive', 'true');
 
-      const response = await axios.post(
-        `${backendUrl}/api/design-assets`,
+      const response = await api.post(
+        API_ENDPOINTS.DESIGN_ASSETS.CREATE,
         formData,
-        { 
-          headers: { 
-            token, 
-            'Content-Type': 'multipart/form-data' 
-          } 
-        }
+        { token, isFormData: true }
       );
 
-      if (response.data.success) {
+      if (response.success) {
         toast.success('Image uploaded successfully!');
         setSelectedFile(null);
         setImagePreview(null);
@@ -257,12 +250,12 @@ const CarouselImagesSection = ({ token, backendUrl }) => {
     }
 
     try {
-      const response = await axios.delete(
-        `${backendUrl}/api/design-assets/${id}`,
-        { headers: { token } }
+      const response = await api.delete(
+        API_ENDPOINTS.DESIGN_ASSETS.DELETE(id),
+        { token }
       );
 
-      if (response.data.success) {
+      if (response.success) {
         toast.success('Image deleted successfully!');
         fetchCarouselImages();
       }
@@ -372,9 +365,9 @@ const SiteSettings = ({ token }) => {
 
   const fetchSettings = async () => {
     try {
-      const response = await axios.get(`${backendUrl}/api/site-settings`);
-      if (response.data.success) {
-        setSettings(response.data.data);
+      const response = await api.get(API_ENDPOINTS.SITE_SETTINGS.GET, { token });
+      if (response.success) {
+        setSettings(response.data);
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -395,17 +388,15 @@ const SiteSettings = ({ token }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await axios.put(
-        `${backendUrl}/api/site-settings`,
+      const response = await api.put(
+        API_ENDPOINTS.SITE_SETTINGS.UPDATE,
         settings,
-        {
-          headers: { token },
-        }
+        { token }
       );
 
-      if (response.data.success) {
+      if (response.success) {
         toast.success('Settings saved successfully!');
-        setSettings(response.data.data);
+        setSettings(response.data);
       }
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -422,17 +413,15 @@ const SiteSettings = ({ token }) => {
 
     setSaving(true);
     try {
-      const response = await axios.post(
-        `${backendUrl}/api/site-settings/reset`,
+      const response = await api.post(
+        `${getBackendUrl()}/api/site-settings/reset`,
         {},
-        {
-          headers: { token },
-        }
+        { token }
       );
 
-      if (response.data.success) {
+      if (response.success) {
         toast.success('Settings reset to defaults!');
-        setSettings(response.data.data);
+        setSettings(response.data);
       }
     } catch (error) {
       console.error('Error resetting settings:', error);
@@ -514,7 +503,7 @@ const SiteSettings = ({ token }) => {
         </div>
 
         {/* Hero Carousel Images Section */}
-        <CarouselImagesSection token={token} backendUrl={backendUrl} />
+        <CarouselImagesSection token={token} />
 
         {/* Collections Section */}
         <div className="mb-8 border-b pb-6">
@@ -571,7 +560,7 @@ const SiteSettings = ({ token }) => {
         </div>
 
         {/* Circular Gallery Section */}
-        <CircularGallerySection token={token} backendUrl={backendUrl} settings={settings} handleInputChange={handleInputChange} />
+        <CircularGallerySection token={token} settings={settings} handleInputChange={handleInputChange} />
 
         {/* Products Section */}
         <div className="mb-8 border-b pb-6">

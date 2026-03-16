@@ -14,23 +14,30 @@ import CollectionTooltips from './pages/CollectionTooltips'
 import PhoneBrands from './pages/PhoneBrands'
 import SuggestedProducts from './pages/SuggestedProducts'
 import FeaturedHomeProducts from './pages/FeaturedHomeProducts'
+import Testimonials from './pages/Testimonials'
 import Users from './pages/Users'
 import Login from './components/Login'
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import { getBackendUrl } from './config/api'
+import { CURRENCY, STORAGE_KEYS } from './utils/constants'
 
-
-export const backendUrl = import.meta.env.VITE_BACKEND_URL
-export const currency = '₹'
+// Export for backward compatibility
+export const backendUrl = getBackendUrl()
+export const currency = CURRENCY
 
 
 const App = () => {
 
-  const [token, setToken] = useState(localStorage.getItem('token')?localStorage.getItem('token'):'');
+  const [token, setToken] = useState(localStorage.getItem(STORAGE_KEYS.TOKEN) || '');
 
-  useEffect(()=>{
-    localStorage.setItem('token',token)
-  },[token])
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem(STORAGE_KEYS.TOKEN, token)
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.TOKEN)
+    }
+  }, [token])
 
   return (
     <div className='bg-gray-50 min-h-screen'>
@@ -56,6 +63,7 @@ const App = () => {
                 <Route path='/phone-brands' element={<PhoneBrands token={token} />} />
                 <Route path='/suggested-products' element={<SuggestedProducts token={token} />} />
                 <Route path='/featured-home-products' element={<FeaturedHomeProducts token={token} />} />
+                <Route path='/testimonials' element={<Testimonials token={token} />} />
                 <Route path='/users' element={<Users token={token} />} />
               </Routes>
             </div>

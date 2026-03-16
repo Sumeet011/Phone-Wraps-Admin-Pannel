@@ -9,6 +9,10 @@ import AddCollectionModal from '../components/AddCollectionModal'
 const Add = ({token}) => {
 
   const [image1,setImage1] = useState(false)
+  const [image2,setImage2] = useState(false)
+  const [image3,setImage3] = useState(false)
+  const [image4,setImage4] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   // Product Type
   const [productType, setProductType] = useState("gaming"); // gaming or Standard
@@ -31,10 +35,20 @@ const Add = ({token}) => {
   const [usedLevels, setUsedLevels] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   
+  // Other type specific
+  const [otherCollections, setOtherCollections] = useState([]);
+  const [selectedOtherCollection, setSelectedOtherCollection] = useState("");
+  const [loadingOtherCollections, setLoadingOtherCollections] = useState(false);
+  const [phoneBrands, setPhoneBrands] = useState([]);
+  const [loadingPhoneBrands, setLoadingPhoneBrands] = useState(false);
+  const [phoneBrandData, setPhoneBrandData] = useState([]);
+  
   // Basic Product Info
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [plateprice, setPlateprice] = useState("");
+  const [quantity, setQuantity] = useState("0");
   const [level, setLevel] = useState("1");
   
   // Product Details
@@ -56,6 +70,9 @@ const Add = ({token}) => {
       fetchGroups();
     } else if (productType === "Standard") {
       fetchStandardCollections();
+    } else if (productType === "other") {
+      fetchOtherCollections();
+      fetchPhoneBrands();
     }
   }, [productType]);
 
@@ -63,13 +80,18 @@ const Add = ({token}) => {
   useEffect(() => {
     if (selectedGroup && groups.length > 0 && collections.length > 0) {
       const group = groups.find(g => (g._id || g.id) === selectedGroup);
-      if (group && group.members) {
-        // Filter collections that are in this group's members array
-        const groupCollectionIds = group.members.map(m => m._id || m.id || m);
+      if (group && group.collections) {
+        // Filter collections that are in this group's collections array
+        const groupCollectionIds = group.collections.map(c => {
+          // Handle both populated and unpopulated references
+          if (typeof c === 'string') return c;
+          return c._id || c.id || c;
+        });
         const filtered = collections.filter(col => 
           groupCollectionIds.includes(col._id || col.id)
         );
         console.log('Selected group:', group);
+        console.log('Group collection IDs:', groupCollectionIds);
         console.log('Filtered collections:', filtered);
         setFilteredCollections(filtered);
         setSelectedCollection(""); // Reset collection selection when group changes
@@ -77,7 +99,8 @@ const Add = ({token}) => {
         setFilteredCollections([]);
       }
     } else {
-      setFilteredCollections(collections);
+      // Don't show any collections until a group is selected
+      setFilteredCollections([]);
     }
   }, [selectedGroup, groups, collections]);
   
@@ -110,7 +133,7 @@ const Add = ({token}) => {
       
       if (collectionResponse.data.success && collectionResponse.data.data) {
         const collection = collectionResponse.data.data;
-        const productIds = collection.Products || [];
+        const productIds = collection.products || [];
         console.log('Product IDs in collection:', productIds);
         
         if (productIds.length === 0) {
@@ -201,13 +224,13 @@ const Add = ({token}) => {
   const fetchStandardCollections = async () => {
     try {
       setLoadingStandardCollections(true);
-      const response = await axios.get(backendUrl + '/api/collections?type=normal');
+      const response = await axios.get(backendUrl + '/api/collections?type=swap-wrap');
       console.log('Standard Collections response:', response.data);
       if (response.data.success) {
         const cols = response.data.items || response.data.collections || response.data.data || [];
         console.log('All collections received:', cols);
-        // Filter to only show Standard type collections
-        const standardCols = cols.filter(col => col.type === 'normal');
+        // Filter to only show swap-wrap type collections
+        const standardCols = cols.filter(col => col.type === 'swap-wrap');
         console.log('Filtered standard collections:', standardCols);
         console.log('Number of standard collections:', standardCols.length);
         setStandardCollections(standardCols);
@@ -220,6 +243,56 @@ const Add = ({token}) => {
       toast.error('Failed to fetch standard collections: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoadingStandardCollections(false);
+    }
+  };
+  
+  const fetchOtherCollections = async () => {
+    try {
+      setLoadingOtherCollections(true);
+      const response = await axios.get(backendUrl + '/api/collections?type=normal');
+      console.log('Other Collections response:', response.data);
+      if (response.data.success) {
+        const cols = response.data.items || response.data.collections || response.data.data || [];
+        const otherCols = cols.filter(col => col.type === 'normal');
+        console.log('Filtered other collections:', otherCols);
+        setOtherCollections(otherCols);
+      } else {
+        console.log('Other collections fetch failed:', response.data);
+        toast.error('Failed to fetch other collections');
+      }
+    } catch (error) {
+      console.error('Error fetching other collections:', error);
+      toast.error('Failed to fetch other collections: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoadingOtherCollections(false);
+    }
+  };
+  
+  const fetchPhoneBrands = async () => {
+    try {
+      setLoadingPhoneBrands(true);
+      const response = await axios.get(backendUrl + '/api/phone-brands');
+      console.log('Phone Brands response:', response.data);
+      if (response.data.success) {
+        const brands = response.data.data || [];
+        setPhoneBrands(brands);
+        // Initialize phone brand data with all brands and models, default cover count to 0
+        const initialData = brands.map(brand => ({
+          brandName: brand.brandName,
+          models: brand.models.map(model => ({
+            modelName: model.modelName,
+            coverCount: 0
+          }))
+        }));
+        setPhoneBrandData(initialData);
+      } else {
+        toast.error('Failed to fetch phone brands');
+      }
+    } catch (error) {
+      console.error('Error fetching phone brands:', error);
+      toast.error('Failed to fetch phone brands: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoadingPhoneBrands(false);
     }
   };
 
@@ -251,18 +324,40 @@ const Add = ({token}) => {
    const onSubmitHandler = async (e) => {
     e.preventDefault();
 
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
       const formData = new FormData();
 
       // Basic Info
       formData.append("name", name);
       formData.append("description", description);
-      // Price only for Standard products
-      if (productType === "Standard") {
+      // Price for non-gaming products
+      if (productType !== "gaming" && price) {
         formData.append("price", Number(price));
       }
-      formData.append("type", productType);
-      formData.append("level", level);
+      // Plate price for swap-wrap products
+      if (productType === "Standard" && plateprice) {
+        formData.append("plateprice", Number(plateprice));
+      }
+      // Convert product type to backend format
+      const backendType = productType === "Standard" ? "swap-wrap" : productType.toLowerCase();
+      formData.append("type", backendType);
+      // Only append level for gaming products
+      if (productType === "gaming") {
+        formData.append("level", level);
+      }
+      
+      // Quantity - for gaming and Standard (swap-wrap) products, use 0 (managed by global storage), for accessories use user input
+      if (productType === "gaming" || productType === "Standard") {
+        formData.append("quantity", 0); // Gaming and swap-wrap products have different stock logic (managed globally)
+      } else {
+        formData.append("quantity", Number(quantity) || 0);
+      }
       
       // Product Details
       formData.append("category", category);
@@ -299,10 +394,91 @@ const Add = ({token}) => {
         console.log("Selected Standard Collection ID:", selectedStandardCollection);
         formData.append("collectionId", selectedStandardCollection);
       }
+      
+      // Other collection specific
+      if (productType === "other") {
+        if (!selectedOtherCollection) {
+          toast.error("Please select a collection for other products");
+          return;
+        }
+        
+        // Check if phone brands exist in the system
+        if (!phoneBrands || phoneBrands.length === 0) {
+          toast.error("No phone brands available. Please add phone brands first from the Phone Brands page.");
+          return;
+        }
+        
+        console.log("Selected Other Collection ID:", selectedOtherCollection);
+        formData.append("collectionId", selectedOtherCollection);
+        
+        // Filter phone brand data to only include models with coverCount > 0
+        const filteredPhoneBrands = phoneBrandData
+          .map(brand => ({
+            brandName: brand.brandName,
+            models: brand.models.filter(model => model.coverCount > 0)
+          }))
+          .filter(brand => brand.models.length > 0);
+        
+        // Check if at least one model has been selected (coverCount > 0)
+        if (filteredPhoneBrands.length === 0) {
+          toast.error("Please set cover count (greater than 0) for at least one phone model");
+          return;
+        }
+        
+        console.log("Filtered phone brands data:", filteredPhoneBrands);
+        // Add phone brand data
+        formData.append("phoneBrands", JSON.stringify(filteredPhoneBrands));
+      }
 
-      // Image
+      // Images - For gaming: only image1, for others: all available images
       if (image1) {
+        console.log('Image1 details:', {
+          name: image1.name,
+          type: image1.type,
+          size: image1.size,
+          isFile: image1 instanceof File
+        });
         formData.append("image1", image1);
+      } else {
+        toast.error("Please upload at least one product image");
+        return;
+      }
+      
+      // Only append additional images for non-gaming products
+      if (productType !== "gaming") {
+        if (image2) {
+          console.log('Image2 details:', {
+            name: image2.name,
+            type: image2.type,
+            size: image2.size
+          });
+          formData.append("image2", image2);
+        }
+        if (image3) {
+          console.log('Image3 details:', {
+            name: image3.name,
+            type: image3.type,
+            size: image3.size
+          });
+          formData.append("image3", image3);
+        }
+        if (image4) {
+          console.log('Image4 details:', {
+            name: image4.name,
+            type: image4.type,
+            size: image4.size
+          });
+          formData.append("image4", image4);
+        }
+      }
+
+      console.log('FormData entries:');
+      for (let pair of formData.entries()) {
+        if (pair[1] instanceof File) {
+          console.log(pair[0], '= File:', pair[1].name, pair[1].type);
+        } else {
+          console.log(pair[0], '=', pair[1]);
+        }
       }
 
   // POST to backend products route (server expects POST /api/products with field name 'image1')
@@ -314,7 +490,12 @@ const Add = ({token}) => {
         setName('');
         setDescription('');
         setPrice('');
+        setPlateprice('');
+        setQuantity('0');
         setImage1(false);
+        setImage2(false);
+        setImage3(false);
+        setImage4(false);
         setPrimaryColor('');
         setSecondaryColor('');
         setHexCode('');
@@ -323,6 +504,14 @@ const Add = ({token}) => {
         setSelectedCollection('');
         setSelectedGroup('');
         setSelectedStandardCollection('');
+        setSelectedOtherCollection('');
+        setPhoneBrandData(phoneBrands.map(brand => ({
+          brandName: brand.brandName,
+          models: brand.models.map(model => ({
+            modelName: model.modelName,
+            coverCount: 0
+          }))
+        })));
         setCustomizable(false);
       } else {
         toast.error(response.data.message);
@@ -331,6 +520,8 @@ const Add = ({token}) => {
     } catch (error) {
       console.log(error);
       toast.error(error.message)
+    } finally {
+      setIsSubmitting(false);
     }
    }
 
@@ -345,9 +536,22 @@ const Add = ({token}) => {
       <AddCollectionModal
         isOpen={isAddCollectionModalOpen}
         onClose={() => setIsAddCollectionModalOpen(false)}
-        onCollectionAdded={productType === "gaming" ? fetchCollections : fetchStandardCollections}
+        onCollectionAdded={() => {
+          if (productType === "gaming") {
+            fetchCollections();
+            fetchGroups(); // Refresh groups to show updated collection count
+          } else if (productType === "other") {
+            fetchOtherCollections();
+          } else {
+            fetchStandardCollections();
+          }
+        }}
         groupId={productType === "gaming" ? selectedGroup : null}
-        collectionType={productType === "gaming" ? "gaming" : "normal"}
+        collectionType={
+          productType === "gaming" ? "gaming" : 
+          productType === "other" ? "normal" :
+          "swap-wrap"
+        }
       />
       
       <form onSubmit={onSubmitHandler} className='flex flex-col w-full items-start gap-4 p-6 bg-gray-50 rounded-lg max-w-6xl'>
@@ -361,46 +565,46 @@ const Add = ({token}) => {
       {/* Product Type Selection */}
       <div className='w-full'>
         <p className='mb-3 font-semibold text-gray-700'>Product Type *</p>
-        <div className='flex gap-4'>
+        <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
           <div 
             onClick={() => setProductType("gaming")}
-            className={`flex-1 p-4 border-2 rounded-lg cursor-pointer transition ${
+            className={`p-4 border-2 rounded-lg cursor-pointer transition ${
               productType === "gaming" 
                 ? 'border-blue-500 bg-blue-50' 
                 : 'border-gray-300 bg-white hover:border-blue-300'
             }`}
           >
-            <div className='flex items-center gap-3'>
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                productType === "gaming" ? 'border-blue-500' : 'border-gray-300'
-              }`}>
-                {productType === "gaming" && <div className='w-3 h-3 rounded-full bg-blue-500'></div>}
-              </div>
-              <div>
-                <p className='font-semibold text-gray-800'>🎮 Gaming Collection</p>
-                <p className='text-xs text-gray-600'>Add to existing gaming collection and group</p>
-              </div>
+            <div className='flex flex-col items-center text-center gap-2'>
+              <span className='text-2xl'>🎮</span>
+              <p className='font-semibold text-sm text-gray-800'>Gaming</p>
             </div>
           </div>
           
           <div 
             onClick={() => setProductType("Standard")}
-            className={`flex-1 p-4 border-2 rounded-lg cursor-pointer transition ${
+            className={`p-4 border-2 rounded-lg cursor-pointer transition ${
               productType === "Standard" 
                 ? 'border-green-500 bg-green-50' 
                 : 'border-gray-300 bg-white hover:border-green-300'
             }`}
           >
-            <div className='flex items-center gap-3'>
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                productType === "Standard" ? 'border-green-500' : 'border-gray-300'
-              }`}>
-                {productType === "Standard" && <div className='w-3 h-3 rounded-full bg-green-500'></div>}
-              </div>
-              <div>
-                <p className='font-semibold text-gray-800'>📱 Standard Product</p>
-                <p className='text-xs text-gray-600'>Regular product without collection</p>
-              </div>
+            <div className='flex flex-col items-center text-center gap-2'>
+              <span className='text-2xl'>📱</span>
+              <p className='font-semibold text-sm text-gray-800'>Swap-Wrap</p>
+            </div>
+          </div>
+          
+          <div 
+            onClick={() => setProductType("other")}
+            className={`p-4 border-2 rounded-lg cursor-pointer transition ${
+              productType === "other" 
+                ? 'border-purple-500 bg-purple-50' 
+                : 'border-gray-300 bg-white hover:border-purple-300'
+            }`}
+          >
+            <div className='flex flex-col items-center text-center gap-2'>
+              <span className='text-2xl'>📦</span>
+              <p className='font-semibold text-sm text-gray-800'>Other</p>
             </div>
           </div>
         </div>
@@ -463,7 +667,7 @@ const Add = ({token}) => {
                       <div onClick={() => setSelectedGroup(group._id)}>
                         <p className='font-semibold text-sm text-gray-800 truncate pr-6'>{group.name}</p>
                         <p className='text-xs text-gray-500 mt-1'>
-                          {group.members?.length || 0} collections
+                          {group.collections?.length || 0} collections
                         </p>
                       </div>
                       <button
@@ -526,7 +730,7 @@ const Add = ({token}) => {
                     >
                       <p className='font-semibold text-sm text-gray-800 truncate'>{collection.name}</p>
                       <p className='text-xs text-gray-500 mt-1'>
-                        {collection.Products?.length || 0} products
+                        {collection.products?.length || 0} products
                       </p>
                     </div>
                   ))
@@ -537,6 +741,134 @@ const Add = ({token}) => {
 
           
           
+        </div>
+      )}
+
+      {/* Other Product Type Collection Selection */}
+      {productType === "other" && (
+        <div key="other-section" className='w-full bg-purple-50 p-4 rounded-lg border border-purple-200'>
+          <div className='flex justify-between items-center mb-4'>
+            <h3 className='font-semibold text-gray-800'>📦 Other Product Settings</h3>
+            <button
+              type="button"
+              onClick={() => {
+                fetchOtherCollections();
+                fetchPhoneBrands();
+              }}
+              className='px-3 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 transition'
+            >
+              🔄 Refresh
+            </button>
+          </div>
+
+          {/* Collection Selection */}
+          <div className='mb-4'>
+            <div className='flex justify-between items-center mb-2'>
+              <p className='font-medium text-gray-700'>Select Collection *</p>
+              <button
+                type="button"
+                onClick={() => setIsAddCollectionModalOpen(true)}
+                className='px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition flex items-center gap-1'
+              >
+                <span>+</span> New Collection
+              </button>
+            </div>
+            <div className='overflow-x-auto pb-2'>
+              <div className='flex gap-3'>
+                {loadingOtherCollections ? (
+                  <p className='text-sm text-gray-500'>Loading collections...</p>
+                ) : otherCollections.length === 0 ? (
+                  <div className='text-sm text-gray-500 flex flex-col gap-2'>
+                    <p>No other collections available. Create a collection first.</p>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddCollectionModalOpen(true)}
+                      className='px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition'
+                    >
+                      + Create Your First Other Collection
+                    </button>
+                  </div>
+                ) : (
+                  otherCollections.map((collection) => (
+                    <div
+                      key={collection._id || collection.id}
+                      onClick={() => {
+                        console.log('Selecting other collection:', collection._id || collection.id);
+                        setSelectedOtherCollection(collection._id || collection.id);
+                      }}
+                      className={`min-w-[180px] p-3 border-2 rounded-lg cursor-pointer transition shrink-0 ${
+                        selectedOtherCollection === (collection._id || collection.id)
+                          ? 'border-purple-500 bg-purple-100 shadow-md'
+                          : 'border-gray-300 bg-white hover:border-purple-300 hover:shadow'
+                      }`}
+                    >
+                      <p className='font-semibold text-sm text-gray-800 truncate'>{collection.name}</p>
+                      <p className='text-xs text-gray-500 mt-1'>
+                        {collection.products?.length || 0} products
+                      </p>
+                      <p className='text-xs text-gray-400 mt-1'>Type: Other</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Phone Brands & Models Cover Count */}
+          {selectedOtherCollection && (
+            <div className='mt-4 bg-white p-4 rounded-lg border border-purple-200'>
+              <h4 className='font-semibold text-gray-800 mb-2'>📱 Phone Brand Cover Counts</h4>
+              <p className='text-sm text-gray-600 mb-2'>Set the number of back covers available for each phone model</p>
+              <div className='bg-blue-50 border border-blue-200 rounded p-2 mb-4'>
+                <p className='text-xs text-blue-800'>
+                  💡 <span className='font-semibold'>Tip:</span> Only set cover count {`"(> 0)"`} for phone models that are compatible with this product. You must select at least one model.
+                </p>
+              </div>
+              
+              {loadingPhoneBrands ? (
+                <p className='text-sm text-gray-500'>Loading phone brands...</p>
+              ) : phoneBrands.length === 0 ? (
+                <div className='bg-orange-50 border border-orange-300 rounded-lg p-4 text-center'>
+                  <p className='text-sm font-semibold text-orange-800 mb-2'>⚠️ No phone brands available</p>
+                  <p className='text-xs text-orange-700 mb-3'>
+                    You need to add phone brands and models before creating 'Other' type products.
+                  </p>
+                  <p className='text-xs text-orange-600'>
+                    Please go to the <span className='font-semibold'>Phone Brands</span> page to add brands and models first.
+                  </p>
+                </div>
+              ) : (
+                <div className='space-y-4 max-h-96 overflow-y-auto'>
+                  {phoneBrandData.map((brand, brandIndex) => (
+                    <div key={brandIndex} className='border border-gray-200 rounded-lg p-3'>
+                      <h5 className='font-semibold text-gray-700 mb-2'>{brand.brandName}</h5>
+                      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
+                        {brand.models.map((model, modelIndex) => (
+                          <div key={modelIndex} className='flex items-center gap-2'>
+                            <label className='text-sm text-gray-600 flex-1 truncate' title={model.modelName}>
+                              {model.modelName}
+                            </label>
+                            <input
+                              type='number'
+                              min='0'
+                              value={model.coverCount}
+                              onChange={(e) => {
+                                const newData = [...phoneBrandData];
+                                newData[brandIndex].models[modelIndex].coverCount = parseInt(e.target.value) || 0;
+                                setPhoneBrandData(newData);
+                              }}
+                              className='w-20 px-2 py-1 border border-gray-300 rounded focus:border-purple-500 focus:outline-none text-sm'
+                              placeholder='0'
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -599,7 +931,7 @@ const Add = ({token}) => {
                     >
                       <p className='font-semibold text-sm text-gray-800 truncate'>{collection.name}</p>
                       <p className='text-xs text-gray-500 mt-1'>
-                        {collection.Products?.length || 0} products
+                        {collection.products?.length || 0} products
                       </p>
                       <p className='text-xs text-gray-400 mt-1'>Type: Standard</p>
                     </div>
@@ -613,21 +945,85 @@ const Add = ({token}) => {
 
       {/* Product Details Form - Only show when selections are made */}
       {((productType === "gaming" && selectedGroup && selectedCollection) || 
-  (productType === "Standard" && selectedStandardCollection)) && (
+  (productType === "Standard" && selectedStandardCollection) ||
+  (productType === "other" && selectedOtherCollection)) && (
   <>
     {/* Upload Image */}
     <div className='w-full'>
-      <p className='mb-2 font-semibold text-gray-700'>Product Image *</p>
-      <label htmlFor="image1" className='cursor-pointer'>
-        <div className='w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden hover:border-blue-400 transition'>
-          <img 
-            className='w-full h-full object-cover' 
-            src={!image1 ? assets.upload_area : URL.createObjectURL(image1)} 
-            alt="Upload" 
-          />
+      <p className='mb-2 font-semibold text-gray-700'>
+        {productType === "gaming" ? 'Product Image *' : 'Product Images * (Up to 4 images)'}
+      </p>
+      <div className='flex gap-4 flex-wrap'>
+        {/* Image 1 - Always shown */}
+        <div>
+          <label htmlFor="image1" className='cursor-pointer block'>
+            <div className='w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden hover:border-blue-400 transition'>
+              <img 
+                className='w-full h-full object-cover' 
+                src={!image1 ? assets.upload_area : URL.createObjectURL(image1)} 
+                alt="Upload 1" 
+              />
+            </div>
+          </label>
+          <input onChange={(e)=>setImage1(e.target.files[0])} type="file" id="image1" hidden accept='image/*'/>
+          <p className='text-xs text-gray-500 text-center mt-1'>{productType === "gaming" ? 'Required' : 'Main'}</p>
         </div>
-        <input onChange={(e)=>setImage1(e.target.files[0])} type="file" id="image1" hidden accept='image/*'/>
-      </label>
+        
+        {/* Images 2-4 - Only for non-gaming products */}
+        {productType !== "gaming" && (
+          <>
+            {/* Image 2 */}
+            <div>
+              <label htmlFor="image2" className='cursor-pointer block'>
+                <div className='w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden hover:border-blue-400 transition'>
+                  <img 
+                    className='w-full h-full object-cover' 
+                    src={!image2 ? assets.upload_area : URL.createObjectURL(image2)} 
+                    alt="Upload 2" 
+                  />
+                </div>
+              </label>
+              <input onChange={(e)=>setImage2(e.target.files[0])} type="file" id="image2" hidden accept='image/*'/>
+              <p className='text-xs text-gray-500 text-center mt-1'>Optional</p>
+            </div>
+            
+            {/* Image 3 */}
+            <div>
+              <label htmlFor="image3" className='cursor-pointer block'>
+                <div className='w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden hover:border-blue-400 transition'>
+                  <img 
+                    className='w-full h-full object-cover' 
+                    src={!image3 ? assets.upload_area : URL.createObjectURL(image3)} 
+                    alt="Upload 3" 
+                  />
+                </div>
+              </label>
+              <input onChange={(e)=>setImage3(e.target.files[0])} type="file" id="image3" hidden accept='image/*'/>
+              <p className='text-xs text-gray-500 text-center mt-1'>Optional</p>
+            </div>
+            
+            {/* Image 4 */}
+            <div>
+              <label htmlFor="image4" className='cursor-pointer block'>
+                <div className='w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden hover:border-blue-400 transition'>
+                  <img 
+                    className='w-full h-full object-cover' 
+                    src={!image4 ? assets.upload_area : URL.createObjectURL(image4)} 
+                    alt="Upload 4" 
+                  />
+                </div>
+              </label>
+              <input onChange={(e)=>setImage4(e.target.files[0])} type="file" id="image4" hidden accept='image/*'/>
+              <p className='text-xs text-gray-500 text-center mt-1'>Optional</p>
+            </div>
+          </>
+        )}
+      </div>
+      <p className='text-xs text-gray-500 mt-2'>
+        {productType === "gaming" 
+          ? 'Upload a single image for this gaming product.' 
+          : 'First image will be the main product image. Add up to 4 images total.'}
+      </p>
     </div>
 
     {/* Basic Information */}
@@ -659,6 +1055,20 @@ const Add = ({token}) => {
 
       {productType === "Standard" && (
         <div key="standard-price">
+          <p className='mb-2 font-semibold text-gray-700'>Backcover + Plates Price (₹) <span className='text-gray-500 font-normal'>(Optional)</span></p>
+          <input 
+            onChange={(e) => setPrice(e.target.value)} 
+            value={price} 
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
+            type="number" 
+            placeholder='499' 
+          />
+          <p className='text-xs text-gray-500 mt-1'>Leave empty to use collection price</p>
+        </div>
+      )}
+      
+      {productType === "other" && (
+        <div key="other-price">
           <p className='mb-2 font-semibold text-gray-700'>Price (₹) *</p>
           <input 
             onChange={(e) => setPrice(e.target.value)} 
@@ -668,6 +1078,31 @@ const Add = ({token}) => {
             placeholder='499' 
             required 
           />
+        </div>
+      )}
+      
+      {productType === "Standard" && (
+        <div key="plate-price">
+          <p className='mb-2 font-semibold text-gray-700'>Plate Price (₹) <span className='text-gray-500 font-normal'>(Optional)</span></p>
+          <input 
+            onChange={(e) => setPlateprice(e.target.value)} 
+            value={plateprice} 
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none' 
+            type="number" 
+            placeholder='149' 
+          />
+          <p className='text-xs text-gray-500 mt-1'>Price for plates only. Leave empty to use collection price</p>
+        </div>
+      )}
+      
+      {/* Info message for Standard/swap-wrap products */}
+      {productType === "Standard" && (
+        <div key="swap-wrap-info" className='md:col-span-2'>
+          <div className='bg-blue-50 border border-blue-200 rounded-lg p-3'>
+            <p className='text-sm text-blue-800'>
+              <strong>💡 Note:</strong> Swap-wrap products don't have individual stock. Stock is managed globally through the phone model inventory system. Prices are optional - if not specified, the product will use the collection's default prices.
+            </p>
+          </div>
         </div>
       )}
 
@@ -870,9 +1305,14 @@ const Add = ({token}) => {
     {/* Submit Button */}
     <button 
       type="submit" 
-      className='w-full md:w-auto px-8 py-3 mt-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition shadow-md hover:shadow-lg'
+      disabled={isSubmitting}
+      className={`w-full md:w-auto px-8 py-3 mt-4 text-white font-semibold rounded-lg transition shadow-md ${
+        isSubmitting
+          ? 'bg-gray-400 cursor-not-allowed'
+          : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 hover:shadow-lg'
+      }`}
     >
-      Add Product
+      {isSubmitting ? 'Adding Product...' : 'Add Product'}
     </button>
   </>
 )}
@@ -891,6 +1331,14 @@ const Add = ({token}) => {
 )}
 
 {productType === "Standard" && !selectedStandardCollection && (
+  <div className='w-full p-6 bg-yellow-50 border border-yellow-200 rounded-lg'>
+    <p className='text-yellow-800 font-medium'>
+      ⚠️ Please select a Collection to continue adding product details.
+    </p>
+  </div>
+)}
+
+{productType === "other" && !selectedOtherCollection && (
   <div className='w-full p-6 bg-yellow-50 border border-yellow-200 rounded-lg'>
     <p className='text-yellow-800 font-medium'>
       ⚠️ Please select a Collection to continue adding product details.

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import { assets } from '../assets/assets';
-import { backendUrl } from '../App.jsx';
+import api from '../utils/api';
+import API_ENDPOINTS from '../config/api';
+import { STORAGE_KEYS } from '../utils/constants';
 
 const Coupons = () => {
     const [coupons, setCoupons] = useState([]);
@@ -15,7 +16,7 @@ const Coupons = () => {
         maxUsage: ''
     });
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
 
     useEffect(() => {
         fetchCoupons();
@@ -23,15 +24,12 @@ const Coupons = () => {
 
     const fetchCoupons = async () => {
         try {
-            const response = await axios.get(`${backendUrl}/api/coupon/list`, {
-                headers: { token }
-            });
-            if (response.data.success) {
-                setCoupons(response.data.coupons);
+            const response = await api.get(API_ENDPOINTS.COUPONS.LIST, { token });
+            if (response.success) {
+                setCoupons(response.coupons || []);
             }
         } catch (error) {
             console.error('Error fetching coupons:', error);
-            toast.error('Failed to fetch coupons');
         }
     };
 
@@ -46,10 +44,8 @@ const Coupons = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post(`${backendUrl}/api/coupon/add`, formData, {
-                headers: { token }
-            });
-            if (response.data.success) {
+            const response = await api.post(API_ENDPOINTS.COUPONS.ADD, formData, { token });
+            if (response.success) {
                 toast.success('Coupon added successfully');
                 setShowAddForm(false);
                 setFormData({
@@ -63,23 +59,19 @@ const Coupons = () => {
             }
         } catch (error) {
             console.error('Error adding coupon:', error);
-            toast.error(error.response?.data?.message || 'Failed to add coupon');
         }
     };
 
     const handleDelete = async (couponId) => {
         if (window.confirm('Are you sure you want to delete this coupon?')) {
             try {
-                const response = await axios.delete(`${backendUrl}/api/coupon/remove/${couponId}`, {
-                    headers: { token }
-                });
-                if (response.data.success) {
+                const response = await api.delete(API_ENDPOINTS.COUPONS.REMOVE(couponId), { token });
+                if (response.success) {
                     toast.success('Coupon deleted successfully');
                     fetchCoupons();
                 }
             } catch (error) {
                 console.error('Error deleting coupon:', error);
-                toast.error('Failed to delete coupon');
             }
         }
     };

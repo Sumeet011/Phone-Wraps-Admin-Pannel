@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
+import api from '../utils/api';
+import API_ENDPOINTS from '../config/api';
 
 const FeaturedHomeProducts = ({ token }) => {
   const [products, setProducts] = useState([]);
@@ -20,13 +20,12 @@ const FeaturedHomeProducts = ({ token }) => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${backendUrl}/api/featured-home-products`);
-      if (response.data.success) {
-        setProducts(response.data.data);
+      const response = await api.get(API_ENDPOINTS.FEATURED_HOME_PRODUCTS.LIST);
+      if (response.success) {
+        setProducts(response.data || []);
       }
     } catch (error) {
-      toast.error('Failed to fetch featured products');
-      console.error(error);
+      console.error('Error fetching featured products:', error);
     } finally {
       setLoading(false);
     }

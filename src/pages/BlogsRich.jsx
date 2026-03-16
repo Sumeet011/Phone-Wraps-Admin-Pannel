@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
+import api from '../utils/api';
+import API_ENDPOINTS from '../config/api';
+import { BLOG_STATUS, BLOG_CATEGORIES } from '../utils/constants';
 
 const BlogsRich = ({ token }) => {
   const [blogs, setBlogs] = useState([]);
@@ -28,13 +29,12 @@ const BlogsRich = ({ token }) => {
   const fetchBlogs = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${backendUrl}/api/blogs`);
-      if (response.data.success) {
-        setBlogs(response.data.blogs);
+      const response = await api.get(API_ENDPOINTS.BLOGS.LIST);
+      if (response.success) {
+        setBlogs(response.blogs || []);
       }
     } catch (error) {
-      toast.error('Failed to fetch blogs');
-      console.error(error);
+      console.error('Error fetching blogs:', error);
     } finally {
       setLoading(false);
     }

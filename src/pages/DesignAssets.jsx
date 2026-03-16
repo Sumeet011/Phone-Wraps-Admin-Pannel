@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
-import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
+import api from '../utils/api'
+import API_ENDPOINTS from '../config/api'
+import { DESIGN_ASSET_CATEGORIES } from '../utils/constants'
 
 const DesignAssets = ({ token }) => {
   const [designAssets, setDesignAssets] = useState([])
@@ -19,7 +20,7 @@ const DesignAssets = ({ token }) => {
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
 
-  const categories = ['HERO','CIRCULAR','CARD']
+  const categories = Object.values(DESIGN_ASSET_CATEGORIES)
 
   useEffect(() => {
     fetchDesignAssets()
@@ -28,20 +29,17 @@ const DesignAssets = ({ token }) => {
   const fetchDesignAssets = async () => {
     try {
       setLoading(true)
-      const url = filterCategory === 'all' 
-        ? `${backendUrl}/api/design-assets` 
-        : `${backendUrl}/api/design-assets?category=${filterCategory}`
+      const params = filterCategory !== 'all' ? { category: filterCategory } : {}
       
-      const response = await axios.get(url)
+      const response = await api.get(API_ENDPOINTS.DESIGN_ASSETS.LIST, { params })
       
-      if (response.data.success) {
-        setDesignAssets(response.data.items || [])
+      if (response.success) {
+        setDesignAssets(response.items || [])
       } else {
-        toast.error(response.data.message)
+        toast.error(response.message)
       }
     } catch (error) {
       console.error('Error fetching design assets:', error)
-      toast.error('Failed to fetch design assets')
     } finally {
       setLoading(false)
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
+import api from '../utils/api';
+import API_ENDPOINTS from '../config/api';
 
 const SuggestedProducts = ({ token }) => {
   const [suggestedProducts, setSuggestedProducts] = useState([]);
@@ -22,13 +22,12 @@ const SuggestedProducts = ({ token }) => {
   const fetchSuggestedProducts = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${backendUrl}/api/suggested-products`);
-      if (response.data.success) {
-        setSuggestedProducts(response.data.data);
+      const response = await api.get(API_ENDPOINTS.SUGGESTED_PRODUCTS.LIST);
+      if (response.success) {
+        setSuggestedProducts(response.data || []);
       }
     } catch (error) {
-      toast.error('Failed to fetch suggested products');
-      console.error(error);
+      console.error('Error fetching suggested products:', error);
     } finally {
       setLoading(false);
     }

@@ -9,6 +9,7 @@ const List = ({ token }) => {
   const [products, setProducts] = useState([])
   const [gamingCollections, setGamingCollections] = useState([])
   const [nonGamingCollections, setNonGamingCollections] = useState([])
+  const [otherCollections, setOtherCollections] = useState([])
   const [loading, setLoading] = useState(true)
   
   // Edit modals state
@@ -66,31 +67,39 @@ const List = ({ token }) => {
         fetchProducts()
       ])
 
-      // Separate gaming and standard collections
-      console.log('All collections:', collectionsData.map(c => ({ name: c.name, type: c.type })));
+      // Separate gaming, standard, and other collections
+      console.log('All collections:', collectionsData.map(c => ({ name: c.name, type: c.type, productsCount: c.products?.length })));
       const gamingCols = collectionsData.filter(col => col.type === 'gaming');
-      const standardCols = collectionsData.filter(col => col.type === 'normal');
-      console.log('Gaming collections filtered:', gamingCols.map(c => c.name));
+      const standardCols = collectionsData.filter(col => col.type === 'swap-wrap' || col.type === 'normal-swap' || col.type === 'custom');
+      const otherCols = collectionsData.filter(col => col.type === 'normal' || col.type === 'other');
+      console.log('Gaming collections filtered:', gamingCols.map(c => ({ name: c.name, products: c.products })));
       console.log('Standard collections filtered:', standardCols.map(c => c.name));
+      console.log('Other collections filtered:', otherCols.map(c => c.name));
 
       // Map collections with their products
       const gamingCollectionsWithProducts = gamingCols.map(collection => ({
         ...collection,
-        products: collection.Products || []
+        products: collection.products || []
       }));
 
       const standardCollectionsWithProducts = standardCols.map(collection => ({
         ...collection,
-        products: collection.Products || []
+        products: collection.products || []
+      }));
+      
+      const otherCollectionsWithProducts = otherCols.map(collection => ({
+        ...collection,
+        products: collection.products || []
       }));
 
       setGamingCollections(gamingCollectionsWithProducts);
       setNonGamingCollections(standardCollectionsWithProducts);
+      setOtherCollections(otherCollectionsWithProducts);
 
       // Find products that are NOT in any collection (orphaned products)
       const productIdsInCollections = new Set();
       collectionsData.forEach(collection => {
-        (collection.Products || []).forEach(product => {
+        (collection.products || []).forEach(product => {
           productIdsInCollections.add(product._id || product.id);
         });
       });
@@ -101,6 +110,7 @@ const List = ({ token }) => {
 
       console.log('Gaming collections:', gamingCollectionsWithProducts.length);
       console.log('Standard collections:', standardCollectionsWithProducts.length);
+      console.log('Other collections:', otherCollectionsWithProducts.length);
       console.log('Orphaned products (not in any collection):', orphanedProducts.length);
       
       setProducts(orphanedProducts);
@@ -201,15 +211,27 @@ const List = ({ token }) => {
     )
   }
 
-  const CollectionRow = ({ collection, isGaming }) => (
+  const CollectionRow = ({ collection, collectionType }) => {
+    const isGaming = collectionType === 'gaming';
+    const isOther = collectionType === 'other';
+    
+    const badgeClasses = isGaming 
+      ? 'bg-purple-100 text-purple-700' 
+      : isOther 
+        ? 'bg-orange-100 text-orange-700' 
+        : 'bg-blue-100 text-blue-700';
+    
+    const badgeText = isGaming ? 'Gaming' : isOther ? 'Other' : 'Standard';
+    
+    return (
     <div className='border rounded-lg p-4 mb-4 bg-white shadow-sm'>
       {/* Collection Header */}
       <div className='flex justify-between items-start mb-3 pb-3 border-b'>
         <div className='flex-1'>
           <div className='flex items-center gap-3'>
             <h3 className='text-lg font-bold text-gray-800'>{collection.name}</h3>
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isGaming ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-              {isGaming ? 'Gaming' : 'Non-Gaming'}
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badgeClasses}`}>
+              {badgeText}
             </span>
           </div>
           <p className='text-sm text-gray-600 mt-1'>{collection.description}</p>
@@ -255,6 +277,12 @@ const List = ({ token }) => {
                   <div className='absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-2'>
                     <p className='text-white text-xs font-bold'>Collection Hero</p>
                   </div>
+                  {/* Show price on hero image for gaming collections */}
+                  {isGaming && (collection.price || (typeof collection.price === 'object' && collection.price?.backcover_plate)) && (
+                    <div className='absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded'>
+                      ₹{typeof collection.price === 'number' ? collection.price : (collection.price?.backcover_plate || 0)}/₹{typeof collection.plateprice === 'number' ? collection.plateprice : (collection.price?.plates || 0)}
+                    </div>
+                  )}
                 </div>
                 <div className='mt-2'>
                   <h2 className='text-sm font-semibold leading-tight'>
@@ -268,14 +296,17 @@ const List = ({ token }) => {
               <div key={idx} className='group relative bg-[#1a1816] rounded-2xl p-3 text-white shadow-lg hover:shadow-xl transition-transform transform hover:scale-105 duration-300 flex flex-col min-w-[200px] flex-shrink-0'>
                 <div className='relative overflow-hidden rounded-xl h-[180px]'>
                   <img 
-                    src={product.image} 
+                    src={product.images && product.images.length > 0 ? product.images[0] : (product.image || 'https://via.placeholder.com/200?text=No+Image')} 
                     alt={product.name}
                     className='w-full h-full object-cover'
                     onError={(e) => e.target.src = 'https://via.placeholder.com/200?text=No+Image'}
                   />
-                  <p className='absolute bottom-2 left-2 text-white text-xs font-semibold bg-black/60 px-2 py-1 rounded'>
-                    ₹{product.price}
-                  </p>
+                  {/* Only show product price for non-gaming collections */}
+                  {!isGaming && (product.coverprice || product.price) && (
+                    <p className='absolute bottom-2 left-2 text-white text-xs font-semibold bg-black/60 px-2 py-1 rounded'>
+                      ₹{product.coverprice || product.price}
+                    </p>
+                  )}
                   <div className='absolute top-2 right-2 flex gap-1'>
                     <button 
                       onClick={() => {
@@ -324,7 +355,7 @@ const List = ({ token }) => {
         )}
       </div>
     </div>
-  )
+  )}
 
   return (
     <div className='max-w-7xl'>
@@ -344,7 +375,7 @@ const List = ({ token }) => {
           </div>
         ) : (
           gamingCollections.map((collection, index) => (
-            <CollectionRow key={collection._id || collection.id || index} collection={collection} isGaming={true} />
+            <CollectionRow key={collection._id || collection.id || index} collection={collection} collectionType='gaming' />
           ))
         )}
       </div>
@@ -364,7 +395,27 @@ const List = ({ token }) => {
           </div>
         ) : (
           nonGamingCollections.map((collection, index) => (
-            <CollectionRow key={collection._id || collection.id || index} collection={collection} isGaming={false} />
+            <CollectionRow key={collection._id || collection.id || index} collection={collection} collectionType='standard' />
+          ))
+        )}
+      </div>
+
+      {/* Other Collections Section */}
+      <div className='mb-8'>
+        <div className='mb-4 pb-2 border-b-2 border-orange-500'>
+          <h2 className='text-2xl font-bold text-gray-800'>Other Collections</h2>
+          <p className='text-sm text-gray-600 mt-1'>
+            {otherCollections.length} collection(s) with {otherCollections.reduce((acc, col) => acc + col.products.length, 0)} product(s)
+          </p>
+        </div>
+        
+        {otherCollections.length === 0 ? (
+          <div className='text-center py-8 bg-gray-50 rounded-lg'>
+            <p className='text-gray-500'>No other collections found</p>
+          </div>
+        ) : (
+          otherCollections.map((collection, index) => (
+            <CollectionRow key={collection._id || collection.id || index} collection={collection} collectionType='other' />
           ))
         )}
       </div>
@@ -398,10 +449,15 @@ const List = ({ token }) => {
                   value={editingCollection.type || 'gaming'}
                   onChange={(e) => setEditingCollection({...editingCollection, type: e.target.value})}
                   className='w-full border rounded px-3 py-2'
+                  disabled
                 >
                   <option value='gaming'>Gaming Collection</option>
-                  <option value='normal'>Normal Collection</option>
+                  <option value='normal-swap'>Standard/Swap Collection</option>
+                  <option value='other'>Other Collection</option>
+                  <option value='custom'>Custom Collection</option>
+                  <option value='accessories'>Accessories Collection</option>
                 </select>
+                <p className='text-xs text-gray-500 mt-1'>Collection type cannot be changed after creation</p>
               </div>
               
               {/* Gaming Collection Specific Fields */}
@@ -412,21 +468,28 @@ const List = ({ token }) => {
                     <input
                       type='number'
                       value={editingCollection.price || ''}
-                      onChange={(e) => setEditingCollection({...editingCollection, price: e.target.value})}
+                      onChange={(e) => setEditingCollection({
+                        ...editingCollection, 
+                        price: Number(e.target.value)
+                      })}
                       className='w-full border rounded px-3 py-2'
                       placeholder='499'
                     />
+                    <p className='text-xs text-gray-500 mt-1'>Price for the collection (covers)</p>
                   </div>
                   <div>
-                    <label className='block text-sm font-semibold mb-1'>Plate Price (₹)</label>
+                    <label className='block text-sm font-semibold mb-1'>Plate Price (₹) *</label>
                     <input
                       type='number'
                       value={editingCollection.plateprice || ''}
-                      onChange={(e) => setEditingCollection({...editingCollection, plateprice: e.target.value})}
+                      onChange={(e) => setEditingCollection({
+                        ...editingCollection,
+                        plateprice: Number(e.target.value)
+                      })}
                       className='w-full border rounded px-3 py-2'
                       placeholder='299'
                     />
-                    <p className='text-xs text-gray-500 mt-1'>Optional: Additional plate/accessory price</p>
+                    <p className='text-xs text-gray-500 mt-1'>Price for additional plates only</p>
                   </div>
                   <div>
                     <label className='block text-sm font-semibold mb-1'>Features (comma-separated)</label>
@@ -499,16 +562,18 @@ const List = ({ token }) => {
                     formData.append('description', editingCollection.description);
                     formData.append('type', editingCollection.type);
                     
-                    // Gaming collection specific fields
-                    if (editingCollection.type === 'gaming') {
+                    // Gaming/swap-wrap collection price fields (flat structure)
+                    if (editingCollection.type === 'gaming' || editingCollection.type === 'swap-wrap') {
                       if (editingCollection.price) {
-                        formData.append('price', editingCollection.price);
+                        formData.append('price', Number(editingCollection.price));
                       }
                       if (editingCollection.plateprice) {
-                        formData.append('plateprice', editingCollection.plateprice);
+                        formData.append('plateprice', Number(editingCollection.plateprice));
                       }
                       if (editingCollection.Features && editingCollection.Features.length > 0) {
-                        formData.append('Features', JSON.stringify(editingCollection.Features));
+                        editingCollection.Features.forEach(feature => {
+                          formData.append('features[]', feature);
+                        });
                       }
                     }
                     
@@ -557,36 +622,142 @@ const List = ({ token }) => {
             <h3 className='text-xl font-bold mb-4'>Edit Product</h3>
             <div className='space-y-6'>
               
-              {/* Product Image */}
+              {/* Product Images */}
               <div>
-                <label className='block text-sm font-semibold mb-2'>Product Image</label>
-                <div className='flex gap-4 items-start'>
-                  {editingProduct.image && (
-                    <div className='w-32 h-32 border rounded overflow-hidden'>
-                      <img src={editingProduct.image} alt="Current" className='w-full h-full object-cover' />
-                    </div>
+                <label className='block text-sm font-semibold mb-2'>
+                  Product Image{editingProduct.type !== 'gaming' ? 's' : ''} *
+                </label>
+                <p className='text-xs text-gray-500 mb-3'>
+                  {editingProduct.type === 'gaming' 
+                    ? 'Upload a single image for this gaming product.' 
+                    : 'Upload up to 4 images. First image will be the main product image.'}
+                </p>
+                
+                <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+                  {/* Image 1 */}
+                  <div>
+                    <label htmlFor='productImage1Upload' className='cursor-pointer block'>
+                      <div className='w-full aspect-square border-2 border-dashed border-gray-300 rounded hover:border-blue-400 overflow-hidden'>
+                        {editingProduct.newImage1 ? (
+                          <img src={URL.createObjectURL(editingProduct.newImage1)} alt="New 1" className='w-full h-full object-cover' />
+                        ) : editingProduct.images && editingProduct.images.length > 0 ? (
+                          <img src={editingProduct.images[0]} alt="Current 1" className='w-full h-full object-cover' />
+                        ) : (
+                          <div className='w-full h-full flex items-center justify-center'>
+                            <div className='text-center'>
+                              <svg className='mx-auto h-8 w-8 text-gray-400' stroke='currentColor' fill='none' viewBox='0 0 48 48'>
+                                <path d='M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' />
+                              </svg>
+                              <p className='text-xs text-gray-500 mt-1'>Main</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <input 
+                        id='productImage1Upload'
+                        type='file' 
+                        accept='image/*'
+                        hidden
+                        onChange={(e) => setEditingProduct({...editingProduct, newImage1: e.target.files[0]})}
+                      />
+                    </label>
+                    <p className='text-xs text-center text-gray-500 mt-1'>Image 1 (Main)</p>
+                  </div>
+
+                  {/* Image 2-4 only for non-gaming products */}
+                  {editingProduct.type !== 'gaming' && (
+                    <>
+                      {/* Image 2 */}
+                      <div>
+                        <label htmlFor='productImage2Upload' className='cursor-pointer block'>
+                          <div className='w-full aspect-square border-2 border-dashed border-gray-300 rounded hover:border-blue-400 overflow-hidden'>
+                            {editingProduct.newImage2 ? (
+                              <img src={URL.createObjectURL(editingProduct.newImage2)} alt="New 2" className='w-full h-full object-cover' />
+                            ) : (editingProduct.images && editingProduct.images.length > 1) ? (
+                              <img src={editingProduct.images[1]} alt="Current 2" className='w-full h-full object-cover' />
+                            ) : (
+                              <div className='w-full h-full flex items-center justify-center'>
+                                <div className='text-center'>
+                                  <svg className='mx-auto h-8 w-8 text-gray-400' stroke='currentColor' fill='none' viewBox='0 0 48 48'>
+                                    <path d='M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' />
+                                  </svg>
+                                  <p className='text-xs text-gray-500 mt-1'>Upload</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <input 
+                            id='productImage2Upload'
+                            type='file' 
+                            accept='image/*'
+                            hidden
+                            onChange={(e) => setEditingProduct({...editingProduct, newImage2: e.target.files[0]})}
+                          />
+                        </label>
+                        <p className='text-xs text-center text-gray-500 mt-1'>Image 2 (Optional)</p>
+                      </div>
+
+                      {/* Image 3 */}
+                      <div>
+                        <label htmlFor='productImage3Upload' className='cursor-pointer block'>
+                          <div className='w-full aspect-square border-2 border-dashed border-gray-300 rounded hover:border-blue-400 overflow-hidden'>
+                            {editingProduct.newImage3 ? (
+                              <img src={URL.createObjectURL(editingProduct.newImage3)} alt="New 3" className='w-full h-full object-cover' />
+                            ) : (editingProduct.images && editingProduct.images.length > 2) ? (
+                              <img src={editingProduct.images[2]} alt="Current 3" className='w-full h-full object-cover' />
+                            ) : (
+                              <div className='w-full h-full flex items-center justify-center'>
+                                <div className='text-center'>
+                                  <svg className='mx-auto h-8 w-8 text-gray-400' stroke='currentColor' fill='none' viewBox='0 0 48 48'>
+                                    <path d='M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' />
+                                  </svg>
+                                  <p className='text-xs text-gray-500 mt-1'>Upload</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <input 
+                            id='productImage3Upload'
+                            type='file' 
+                            accept='image/*'
+                            hidden
+                            onChange={(e) => setEditingProduct({...editingProduct, newImage3: e.target.files[0]})}
+                          />
+                        </label>
+                        <p className='text-xs text-center text-gray-500 mt-1'>Image 3 (Optional)</p>
+                      </div>
+
+                      {/* Image 4 */}
+                      <div>
+                        <label htmlFor='productImage4Upload' className='cursor-pointer block'>
+                          <div className='w-full aspect-square border-2 border-dashed border-gray-300 rounded hover:border-blue-400 overflow-hidden'>
+                            {editingProduct.newImage4 ? (
+                              <img src={URL.createObjectURL(editingProduct.newImage4)} alt="New 4" className='w-full h-full object-cover' />
+                            ) : (editingProduct.images && editingProduct.images.length > 3) ? (
+                              <img src={editingProduct.images[3]} alt="Current 4" className='w-full h-full object-cover' />
+                            ) : (
+                              <div className='w-full h-full flex items-center justify-center'>
+                                <div className='text-center'>
+                                  <svg className='mx-auto h-8 w-8 text-gray-400' stroke='currentColor' fill='none' viewBox='0 0 48 48'>
+                                    <path d='M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' />
+                                  </svg>
+                                  <p className='text-xs text-gray-500 mt-1'>Upload</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <input 
+                            id='productImage4Upload'
+                            type='file' 
+                            accept='image/*'
+                            hidden
+                            onChange={(e) => setEditingProduct({...editingProduct, newImage4: e.target.files[0]})}
+                          />
+                        </label>
+                        <p className='text-xs text-center text-gray-500 mt-1'>Image 4 (Optional)</p>
+                      </div>
+                    </>
                   )}
-                  <label htmlFor='productImageUpload' className='cursor-pointer'>
-                    <div className='w-32 h-32 border-2 border-dashed border-gray-300 rounded hover:border-blue-400 flex items-center justify-center'>
-                      {editingProduct.newImage ? (
-                        <img src={URL.createObjectURL(editingProduct.newImage)} alt="New" className='w-full h-full object-cover' />
-                      ) : (
-                        <div className='text-center'>
-                          <svg className='mx-auto h-8 w-8 text-gray-400' stroke='currentColor' fill='none' viewBox='0 0 48 48'>
-                            <path d='M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' />
-                          </svg>
-                          <p className='text-xs text-gray-500 mt-1'>Upload new</p>
-                        </div>
-                      )}
-                    </div>
-                    <input 
-                      id='productImageUpload'
-                      type='file' 
-                      accept='image/*'
-                      hidden
-                      onChange={(e) => setEditingProduct({...editingProduct, newImage: e.target.files[0]})}
-                    />
-                  </label>
                 </div>
               </div>
 
@@ -606,7 +777,7 @@ const List = ({ token }) => {
                   <label className='block text-sm font-semibold mb-1'>Price (₹) {editingProduct.type === 'gaming' ? '(Set by Collection)' : '*'}</label>
                   <input
                     type='number'
-                    value={editingProduct.price || ''}
+                    value={editingProduct.price || editingProduct.coverprice || ''}
                     onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})}
                     className='w-full border rounded px-3 py-2'
                     disabled={editingProduct.type === 'gaming'}
@@ -800,6 +971,49 @@ const List = ({ token }) => {
                 />
               </div>
 
+              {/* Phone Brands - Only for 'other' type products */}
+              {editingProduct.type === 'other' && (
+                <div>
+                  <h4 className='font-semibold text-gray-800 mb-3 border-b pb-2'>📱 Phone Brand Cover Counts</h4>
+                  <p className='text-sm text-gray-600 mb-3'>Edit the number of back covers available for each phone model</p>
+                  
+                  {editingProduct.phoneBrands && editingProduct.phoneBrands.length > 0 ? (
+                    <div className='space-y-4 max-h-96 overflow-y-auto border rounded p-4 bg-gray-50'>
+                      {editingProduct.phoneBrands.map((brand, brandIndex) => (
+                        <div key={brandIndex} className='border border-gray-200 rounded-lg p-3 bg-white'>
+                          <h5 className='font-semibold text-gray-700 mb-2'>{brand.brandName}</h5>
+                          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
+                            {brand.models.map((model, modelIndex) => (
+                              <div key={modelIndex} className='flex items-center gap-2'>
+                                <label className='text-sm text-gray-600 flex-1 truncate' title={model.modelName}>
+                                  {model.modelName}
+                                </label>
+                                <input
+                                  type='number'
+                                  min='0'
+                                  value={model.coverCount}
+                                  onChange={(e) => {
+                                    const newPhoneBrands = [...editingProduct.phoneBrands];
+                                    newPhoneBrands[brandIndex].models[modelIndex].coverCount = parseInt(e.target.value) || '';
+                                    setEditingProduct({...editingProduct, phoneBrands: newPhoneBrands});
+                                  }}
+                                  className='w-20 px-2 py-1 border border-gray-300 rounded focus:border-purple-500 focus:outline-none text-sm'
+                                  placeholder='0'
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className='text-sm text-orange-600 p-3 bg-orange-50 rounded'>
+                      No phone brand data available for this product. This may be an older product created before the phone brands feature was added.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className='flex gap-2 justify-end pt-4 border-t'>
                 <button
@@ -840,9 +1054,23 @@ const List = ({ token }) => {
                       formData.append('features', editingProduct.Features.join(','));
                     }
                     
-                    // Image
-                    if (editingProduct.newImage) {
-                      formData.append('image1', editingProduct.newImage);
+                    // Phone brands for 'other' type products
+                    if (editingProduct.type === 'other' && editingProduct.phoneBrands) {
+                      formData.append('phoneBrands', JSON.stringify(editingProduct.phoneBrands));
+                    }
+                    
+                    // Images
+                    if (editingProduct.newImage1) {
+                      formData.append('image1', editingProduct.newImage1);
+                    }
+                    if (editingProduct.newImage2) {
+                      formData.append('image2', editingProduct.newImage2);
+                    }
+                    if (editingProduct.newImage3) {
+                      formData.append('image3', editingProduct.newImage3);
+                    }
+                    if (editingProduct.newImage4) {
+                      formData.append('image4', editingProduct.newImage4);
                     }
 
                     try {

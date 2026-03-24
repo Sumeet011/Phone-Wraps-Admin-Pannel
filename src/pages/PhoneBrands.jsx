@@ -32,6 +32,19 @@ const PhoneBrands = () => {
     aluminumSheetsCount: ''
   });
 
+  const parseStockInput = (value) => {
+    if (value === '') return '';
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) return '';
+    return Math.max(0, parsed);
+  };
+
+  const toStockNumber = (value) => {
+    if (value === '' || value === null || value === undefined) return 0;
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
+  };
+
   // Fetch all brands
   const fetchBrands = async () => {
     try {
@@ -93,15 +106,21 @@ const PhoneBrands = () => {
       return;
     }
 
+    const normalizedModel = {
+      ...modelForm,
+      backCoversCount: toStockNumber(modelForm.backCoversCount),
+      aluminumSheetsCount: toStockNumber(modelForm.aluminumSheetsCount)
+    };
+
     setBrandForm({
       ...brandForm,
-      models: [...brandForm.models, { ...modelForm }]
+      models: [...brandForm.models, normalizedModel]
     });
 
     setModelForm({ 
       modelName: '',
-      backCoversCount: 0,
-      aluminumSheetsCount: 0
+      backCoversCount: '',
+      aluminumSheetsCount: ''
     });
   };
 
@@ -115,9 +134,15 @@ const PhoneBrands = () => {
     }
 
     try {
+      const payload = {
+        ...modelForm,
+        backCoversCount: toStockNumber(modelForm.backCoversCount),
+        aluminumSheetsCount: toStockNumber(modelForm.aluminumSheetsCount)
+      };
+
       const response = await axios.post(
         `${backendUrl}/api/phone-brands/${selectedBrand._id}/models`,
-        modelForm
+        payload
       );
       if (response.data.success) {
         toast.success('Model added successfully');
@@ -137,8 +162,8 @@ const PhoneBrands = () => {
     setEditingModel(model);
     setEditModelForm({
       modelName: model.modelName,
-      backCoversCount: model.backCoversCount || 0,
-      aluminumSheetsCount: model.aluminumSheetsCount || 0
+      backCoversCount: model.backCoversCount ?? '',
+      aluminumSheetsCount: model.aluminumSheetsCount ?? ''
     });
     setShowEditModelModal(true);
   };
@@ -153,9 +178,15 @@ const PhoneBrands = () => {
     }
 
     try {
+      const payload = {
+        ...editModelForm,
+        backCoversCount: toStockNumber(editModelForm.backCoversCount),
+        aluminumSheetsCount: toStockNumber(editModelForm.aluminumSheetsCount)
+      };
+
       const response = await axios.put(
         `${backendUrl}/api/phone-brands/${selectedBrand._id}/models/${editingModel._id}`,
-        editModelForm
+        payload
       );
       if (response.data.success) {
         toast.success('Model updated successfully');
@@ -478,7 +509,7 @@ const PhoneBrands = () => {
                         type="number"
                         value={modelForm.backCoversCount}
                         onChange={(e) =>
-                          setModelForm({ ...modelForm, backCoversCount: parseInt(e.target.value) || 0 })
+                          setModelForm({ ...modelForm, backCoversCount: parseStockInput(e.target.value) })
                         }
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="0"
@@ -491,7 +522,7 @@ const PhoneBrands = () => {
                         type="number"
                         value={modelForm.aluminumSheetsCount}
                         onChange={(e) =>
-                          setModelForm({ ...modelForm, aluminumSheetsCount: parseInt(e.target.value) || 0 })
+                          setModelForm({ ...modelForm, aluminumSheetsCount: parseStockInput(e.target.value) })
                         }
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="0"
@@ -619,7 +650,7 @@ const PhoneBrands = () => {
                   type="number"
                   value={modelForm.backCoversCount}
                   onChange={(e) =>
-                    setModelForm({ ...modelForm, backCoversCount: parseInt(e.target.value) || 0 })
+                    setModelForm({ ...modelForm, backCoversCount: parseStockInput(e.target.value) })
                   }
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter back covers stock quantity"
@@ -635,7 +666,7 @@ const PhoneBrands = () => {
                   type="number"
                   value={modelForm.aluminumSheetsCount}
                   onChange={(e) =>
-                    setModelForm({ ...modelForm, aluminumSheetsCount: parseInt(e.target.value) || 0 })
+                    setModelForm({ ...modelForm, aluminumSheetsCount: parseStockInput(e.target.value) })
                   }
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter aluminum sheets stock quantity"
@@ -706,7 +737,7 @@ const PhoneBrands = () => {
                   type="number"
                   value={editModelForm.backCoversCount}
                   onChange={(e) =>
-                    setEditModelForm({ ...editModelForm, backCoversCount: parseInt(e.target.value) || 0 })
+                    setEditModelForm({ ...editModelForm, backCoversCount: parseStockInput(e.target.value) })
                   }
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter back covers stock quantity"
@@ -722,7 +753,7 @@ const PhoneBrands = () => {
                   type="number"
                   value={editModelForm.aluminumSheetsCount}
                   onChange={(e) =>
-                    setEditModelForm({ ...editModelForm, aluminumSheetsCount: parseInt(e.target.value) || 0 })
+                    setEditModelForm({ ...editModelForm, aluminumSheetsCount: parseStockInput(e.target.value) })
                   }
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter aluminum sheets stock quantity"

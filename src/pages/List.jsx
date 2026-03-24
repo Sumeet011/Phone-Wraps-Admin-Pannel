@@ -383,7 +383,7 @@ const List = ({ token }) => {
       {/* Standard Collections Section */}
       <div className='mb-8'>
         <div className='mb-4 pb-2 border-b-2 border-green-500'>
-          <h2 className='text-2xl font-bold text-gray-800'>Standard Collections</h2>
+          <h2 className='text-2xl font-bold text-gray-800'>Swap-Wrap Collections</h2>
           <p className='text-sm text-gray-600 mt-1'>
             {nonGamingCollections.length} collection(s) with {nonGamingCollections.reduce((acc, col) => acc + col.products.length, 0)} product(s)
           </p>

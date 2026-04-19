@@ -175,6 +175,8 @@ const CircularGallerySection = ({ token, settings, handleInputChange }) => {
 
 // Carousel Images Section Component
 const CarouselImagesSection = ({ token }) => {
+  const HERO_CATEGORY = 'HERO';
+  const LEGACY_HERO_CATEGORY = 'CARD';
   const [carouselImages, setCarouselImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
@@ -182,19 +184,32 @@ const CarouselImagesSection = ({ token }) => {
 
   useEffect(() => {
     fetchCarouselImages();
-  }, []);
+  }, [token]);
+
+  const fetchImagesByCategory = async (category) => {
+    return api.get(API_ENDPOINTS.DESIGN_ASSETS.LIST, {
+      params: { category, isActive: 'true' },
+      token,
+    });
+  };
 
   const fetchCarouselImages = async () => {
     try {
-      const response = await api.get(API_ENDPOINTS.DESIGN_ASSETS.LIST, {
-        params: { category: 'CARD', isActive: 'true' },
-        token
-      });
-      if (response.success) {
-        setCarouselImages(response.items || []);
+      const heroResponse = await fetchImagesByCategory(HERO_CATEGORY);
+      if (heroResponse.success && (heroResponse.items || []).length > 0) {
+        setCarouselImages(heroResponse.items || []);
+        return;
+      }
+
+      const legacyResponse = await fetchImagesByCategory(LEGACY_HERO_CATEGORY);
+      if (legacyResponse.success) {
+        setCarouselImages(legacyResponse.items || []);
+      } else {
+        setCarouselImages([]);
       }
     } catch (error) {
       console.error('Error fetching carousel images:', error);
+      toast.error('Failed to fetch hero carousel images');
     }
   };
 
@@ -220,14 +235,14 @@ const CarouselImagesSection = ({ token }) => {
     try {
       const formData = new FormData();
       formData.append('image', selectedFile);
-      formData.append('category', 'CARD');
+      formData.append('category', HERO_CATEGORY);
       formData.append('name', `Carousel Image ${Date.now()}`);
       formData.append('isActive', 'true');
 
       const response = await api.post(
         API_ENDPOINTS.DESIGN_ASSETS.CREATE,
         formData,
-        { token, isFormData: true }
+        { token, isMultipart: true }
       );
 
       if (response.success) {
@@ -616,7 +631,7 @@ const SiteSettings = ({ token }) => {
           </div>
         </div>
 
-        {/* Visibility Settings */}
+        {/*
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-700 mb-2">👁️ Section Visibility</h2>
           <p className="text-sm text-gray-500 mb-4">Show or hide collection types on homepage</p>
@@ -649,6 +664,7 @@ const SiteSettings = ({ token }) => {
             </div>
           </div>
         </div>
+        */}
 
         {/* Info Box */}
         <div className="mb-8 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">

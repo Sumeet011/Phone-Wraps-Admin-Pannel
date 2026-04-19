@@ -445,19 +445,9 @@ const List = ({ token }) => {
               </div>
               <div>
                 <label className='block text-sm font-semibold mb-1'>Collection Type</label>
-                <select
-                  value={editingCollection.type || 'gaming'}
-                  onChange={(e) => setEditingCollection({...editingCollection, type: e.target.value})}
-                  className='w-full border rounded px-3 py-2'
-                  disabled
-                >
-                  <option value='gaming'>Gaming Collection</option>
-                  <option value='normal-swap'>Standard/Swap Collection</option>
-                  <option value='other'>Other Collection</option>
-                  <option value='custom'>Custom Collection</option>
-                  <option value='accessories'>Accessories Collection</option>
-                </select>
-                <p className='text-xs text-gray-500 mt-1'>Collection type cannot be changed after creation</p>
+                <div className='w-full border rounded px-3 py-2 bg-gray-100 text-gray-700'>
+                  {(editingCollection.type || 'gaming').replace(/-/g, ' ')}
+                </div>
               </div>
               
               {/* Gaming Collection Specific Fields */}

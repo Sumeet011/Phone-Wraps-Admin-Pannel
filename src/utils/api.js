@@ -27,7 +27,6 @@ const getAuthHeaders = (token) => {
 const getMultipartHeaders = (token) => {
   return {
     token: token,
-    'Content-Type': 'multipart/form-data',
   };
 };
 
@@ -92,13 +91,14 @@ export const apiGet = async (endpoint, options = {}) => {
  */
 export const apiPost = async (endpoint, data = {}, options = {}) => {
   try {
-    const { token, isMultipart = false } = options;
+    const { token, isMultipart = false, isFormData = false } = options;
     const url = getApiUrl(endpoint);
+    const useMultipart = isMultipart || isFormData;
     
     const config = {};
     
     if (token) {
-      config.headers = isMultipart 
+      config.headers = useMultipart 
         ? getMultipartHeaders(token) 
         : getAuthHeaders(token);
     }
@@ -119,13 +119,14 @@ export const apiPost = async (endpoint, data = {}, options = {}) => {
  */
 export const apiPut = async (endpoint, data = {}, options = {}) => {
   try {
-    const { token, isMultipart = false } = options;
+    const { token, isMultipart = false, isFormData = false } = options;
     const url = getApiUrl(endpoint);
+    const useMultipart = isMultipart || isFormData;
     
     const config = {};
     
     if (token) {
-      config.headers = isMultipart 
+      config.headers = useMultipart 
         ? getMultipartHeaders(token) 
         : getAuthHeaders(token);
     }
@@ -146,13 +147,14 @@ export const apiPut = async (endpoint, data = {}, options = {}) => {
  */
 export const apiPatch = async (endpoint, data = {}, options = {}) => {
   try {
-    const { token, isMultipart = false } = options;
+    const { token, isMultipart = false, isFormData = false } = options;
     const url = getApiUrl(endpoint);
+    const useMultipart = isMultipart || isFormData;
     
     const config = {};
     
     if (token) {
-      config.headers = isMultipart 
+      config.headers = useMultipart 
         ? getMultipartHeaders(token) 
         : getAuthHeaders(token);
     }

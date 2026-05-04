@@ -61,6 +61,7 @@ const Add = ({token}) => {
   const [hexCode, setHexCode] = useState("");
   const [pattern, setPattern] = useState("");
   const [customizable, setCustomizable] = useState(false);
+  const [showInBrowseAll, setShowInBrowseAll] = useState(true);
   const [features, setFeatures] = useState("");
   
   // Fetch Collections and Groups
@@ -369,6 +370,7 @@ const Add = ({token}) => {
       formData.append("hexCode", hexCode);
       formData.append("pattern", pattern);
       formData.append("customizable", customizable);
+      formData.append("showInBrowseAll", showInBrowseAll);
       formData.append("features", features);
       
       // Gaming specific
@@ -513,6 +515,7 @@ const Add = ({token}) => {
           }))
         })));
         setCustomizable(false);
+        setShowInBrowseAll(true);
       } else {
         toast.error(response.data.message);
       }
@@ -1285,6 +1288,19 @@ const Add = ({token}) => {
         />
         <label className='cursor-pointer text-gray-700' htmlFor="customizable">
           This product is customizable
+        </label>
+      </div>
+
+      <div className='flex gap-2 mt-2'>
+        <input 
+          onChange={() => setShowInBrowseAll(prev => !prev)} 
+          checked={showInBrowseAll} 
+          type="checkbox" 
+          id='showInBrowseAll' 
+          className='w-4 h-4 text-blue-500'
+        />
+        <label className='cursor-pointer text-gray-700' htmlFor="showInBrowseAll">
+          Show this product in Home Browse All Products section
         </label>
       </div>
     </div>

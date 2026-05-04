@@ -944,6 +944,20 @@ const List = ({ token }) => {
                       <span className='text-sm font-semibold'>Customizable</span>
                     </label>
                   </div>
+                  <div className='flex items-center'>
+                    <label className='flex items-center cursor-pointer'>
+                      <input
+                        type='checkbox'
+                        checked={editingProduct.showInBrowseAll !== false}
+                        onChange={(e) => setEditingProduct({
+                          ...editingProduct,
+                          showInBrowseAll: e.target.checked
+                        })}
+                        className='w-4 h-4 mr-2'
+                      />
+                      <span className='text-sm font-semibold'>Show in Home Browse All Products</span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -1038,6 +1052,8 @@ const List = ({ token }) => {
                       formData.append('hexCode', editingProduct.design.color?.hexCode || '');
                       formData.append('customizable', editingProduct.design.customizable || false);
                     }
+
+                    formData.append('showInBrowseAll', editingProduct.showInBrowseAll ?? true);
                     
                     // Features
                     if (editingProduct.Features && editingProduct.Features.length > 0) {

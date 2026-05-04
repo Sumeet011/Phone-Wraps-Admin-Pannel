@@ -498,6 +498,15 @@ const SiteSettings = ({ token }) => {
                 placeholder="Phone Wraps  "
               />
               <p className="text-xs text-gray-500 mt-1">The text that scrolls horizontally at the top</p>
+              <div className="mt-3 rounded-lg border border-gray-200 bg-gray-900 p-3">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-gray-300">Live Preview</p>
+                <div className="mt-2 overflow-x-auto">
+                  <div className="whitespace-pre text-sm font-semibold text-white">
+                    {`${settings.textScrollContent || ''}\u00A0${settings.textScrollContent || ''}\u00A0`}
+                  </div>
+                </div>
+                <p className="mt-2 text-[11px] text-gray-400">Spacing is preserved exactly as typed in the frontend.</p>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
